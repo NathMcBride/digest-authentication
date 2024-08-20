@@ -1,14 +1,18 @@
 package digest
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/NathMcBride/web-authentication/authentication/hasher"
 	"github.com/NathMcBride/web-authentication/authentication/model"
+	"github.com/NathMcBride/web-authentication/constants"
+	"github.com/NathMcBride/web-authentication/headers/paramlist"
 	"github.com/NathMcBride/web-authentication/providers/credential"
 )
 
-func CreateDigest(credentials credential.Credentials, authHeader model.AuthHeader, Method string) (string, error) {
+func Calculate(credentials credential.Credentials, authHeader model.AuthHeader, Method string) (string, error) {
 	HA1, err := hasher.H(credentials.Username + ":" + authHeader.Realm + ":" + credentials.Password)
 	if err != nil {
 		return "", err
@@ -28,4 +32,22 @@ func CreateDigest(credentials credential.Credentials, authHeader model.AuthHeade
 	}
 
 	return KD, nil
+}
+
+func MakeHeader(realm string, opaque string, nonce string, shouldHashUserName bool) (string, error) {
+	dh := model.DigestHeader{
+		Realm:     realm,
+		Algorithm: constants.SHA256,
+		Qop:       constants.Auth,
+		Opaque:    opaque,
+		Nonce:     nonce,
+		UserHash:  shouldHashUserName,
+	}
+
+	result, error := paramlist.Marshal(dh)
+	if error != nil {
+		return "", errors.New("marshaling digest header failed")
+	}
+
+	return fmt.Sprintf(`Digest %s`, string(result[:])), nil
 }

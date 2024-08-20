@@ -2,8 +2,6 @@ package middleware
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -12,7 +10,6 @@ import (
 	"github.com/NathMcBride/web-authentication/authentication/digest"
 	"github.com/NathMcBride/web-authentication/authentication/store"
 	"github.com/NathMcBride/web-authentication/constants"
-	"github.com/NathMcBride/web-authentication/headers/paramlist"
 	"github.com/NathMcBride/web-authentication/providers/credential"
 	"github.com/NathMcBride/web-authentication/providers/secret"
 	"github.com/NathMcBride/web-authentication/providers/username"
@@ -26,38 +23,11 @@ type Authenticate struct {
 	Authenticator *authenticator.Authenticator
 }
 
-type DigestHeader struct {
-	Realm     string `hparam:"realm,omitempty"`
-	Algorithm string `hparam:"algorithm,unq,omitempty"`
-	Qop       string `hparam:"qop"`
-	Opaque    string `hparam:"opaque"`
-	Nonce     string `hparam:"nonce"`
-	UserHash  bool   `hparam:"userhash,omitempty"`
-}
-
-func (a *Authenticate) createDigestHeader(nonce string) (string, error) {
-	dh := DigestHeader{
-		Realm:     a.Realm,
-		Algorithm: constants.SHA256,
-		Qop:       constants.Auth,
-		Opaque:    a.Opaque,
-		Nonce:     nonce,
-		UserHash:  a.HashUserName,
-	}
-
-	result, error := paramlist.Marshal(dh)
-	if error != nil {
-		return "", errors.New("marshaling digest header failed")
-	}
-
-	return fmt.Sprintf(`Digest %s`, string(result[:])), nil
-}
-
 func (a *Authenticate) HandleUnauthorized(w http.ResponseWriter, r *http.Request) {
 	nonce := digest.RandomKey()
 	a.ClientStore.Add(nonce)
 
-	header, err := a.createDigestHeader(nonce)
+	header, err := digest.MakeHeader(a.Realm, a.Opaque, nonce, a.HashUserName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

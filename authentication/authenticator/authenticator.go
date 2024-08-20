@@ -73,7 +73,7 @@ func (auth *Authenticator) Authenticate(r *http.Request) (User, error) {
 			}
 		}*/
 
-	digest, err := digest.CreateDigest(*credentials, authHeader, r.Method)
+	digest, err := digest.Calculate(*credentials, authHeader, r.Method)
 	if err != nil {
 		return notAuthenticated(err)
 	}
