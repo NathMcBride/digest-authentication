@@ -7,14 +7,87 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/NathMcBride/web-authentication/authentication/authenticator"
+	"github.com/NathMcBride/web-authentication/authentication/contexts"
+	"github.com/NathMcBride/web-authentication/authentication/digest"
+	"github.com/NathMcBride/web-authentication/authentication/middleware"
 	"github.com/google/uuid"
+	"github.com/k0kubun/pp"
 )
 
+/*
+	func main() {
+		addHelloHandler()
+		addCookieHandler()
+		addSessionHandler()
+		addBasicAuthHandler()
+		addFormBasedAuthHandler()
+		addDigestAuthHandler()
+
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	}
+*/
+
+func somethingProtected(w http.ResponseWriter, r *http.Request) {
+	log.Print("Executing finalHandler")
+	w.Write([]byte("Something protected"))
+}
+
+func somethingThatNeedsAuthenticatingHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user := contexts.GetUser(ctx)
+	somethingThatNeedsAuthenticating(w, r, user)
+}
+
+func somethingThatNeedsAuthenticating(w http.ResponseWriter, r *http.Request, auth *authenticator.User) {
+	log.Print("Executing somethingThatNeedsUser")
+	pp.Println(auth)
+	w.Write([]byte("Something that needs a user"))
+}
+
+func somethingPublic(w http.ResponseWriter, r *http.Request) {
+	log.Print("Executing finalHandler")
+	w.Write([]byte("Something public"))
+}
+
 func main() {
-	addHelloHandler()
-	addCookieHandler()
-	addSessionHandler()
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	options := middleware.Options{
+		Realm:              "A-Realm",
+		Opaque:             digest.RandomKey(),
+		ShouldHashUsername: true,
+	}
+
+	da := middleware.NewDigestAuth(options)
+
+	// secretProvider := secret.SecretProviderProvider{}
+	// usernameProvider := username.UsernameProvider{Realm: realm}
+
+	// credentialProvider := credential.CredentialProvider{
+	// 	SecretProvider:   &secretProvider,
+	// 	UsernameProvider: &usernameProvider,
+	// }
+
+	// authenticator := authenticator.Authenticator{
+	// 	Opaque:             opaque,
+	// 	HashUserName:       shouldHashUsername,
+	// 	CredentialProvider: &credentialProvider,
+	// }
+
+	// authenticate := middleware.Authenticate{
+	// 	Opaque:        opaque,
+	// 	Realm:         realm,
+	// 	HashUserName:  shouldHashUsername,
+	// 	ClientStore:   clientStore,
+	// 	Authenticator: &authenticator,
+	// }
+
+	mux := http.NewServeMux()
+	finalHandler := http.HandlerFunc(somethingThatNeedsAuthenticatingHandler)
+
+	mux.Handle("/protected", da.RequireAuth(finalHandler))
+	mux.Handle("/public", http.HandlerFunc(somethingPublic))
+
+	http.ListenAndServe(":8080", mux)
 }
 
 func addSessionHandler() {
@@ -68,4 +141,197 @@ func addCookieHandler() {
 	}
 
 	http.HandleFunc("/count", handler)
+}
+
+func addBasicAuthHandler() {
+	pmap := map[string]string{"jdoe": "password"}
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		if u, p, ok := req.BasicAuth(); ok {
+			if pmap[u] == p {
+				str := fmt.Sprintf("User %s authenticated", u)
+				io.WriteString(w, str)
+				log.Default().Print(str)
+			} else {
+				str := fmt.Sprintf("User %s failed to authenticate", u)
+				w.WriteHeader(http.StatusUnauthorized)
+				log.Default().Print(str)
+			}
+		} else {
+			w.Header().Add("WWW-Authenticate", "Basic Realm=\"Access Server\"")
+			w.WriteHeader(http.StatusUnauthorized)
+			log.Default().Print("Basic authentication needed.")
+		}
+
+	}
+	http.HandleFunc("/basicauth", handler)
+}
+
+type dClient struct {
+	nc       uint64
+	lastSeen int64
+}
+
+/*
+func addDigestAuthHandler() {
+	// pmap := map[string]string{"jdoe": "password"}
+	opaque := RandomKey()
+	// var clients map[string]*dClient
+
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		fmt.Println("HERE")
+		if auth, ok := DigestAuth(req); ok {
+			fmt.Println("HERE2")
+
+			pp.Println(auth)
+			// if pmap[u] == p {
+			// 	str := fmt.Sprintf("User %s authenticated", u)
+			// 	io.WriteString(w, str)
+			// 	log.Default().Print(str)
+			// } else {
+			// 	str := fmt.Sprintf("User %s failed to authenticate", u)
+			// 	w.WriteHeader(http.StatusUnauthorized)
+			// 	log.Default().Print(str)
+			// }
+		} else {
+
+			nonce := RandomKey()
+			// clients[nonce] = &dClient{nc: 0, lastSeen: time.Now().UnixNano()}
+
+			header := fmt.Sprintf(`
+				Digest Realm="Access Server",
+				qop="auth",
+				algorithm=SHA-256,
+				nonce="%s",
+				opaque="%s"`,
+				nonce, opaque)
+
+			w.Header().Add("WWW-Authenticate", header)
+			w.WriteHeader(http.StatusUnauthorized)
+			log.Default().Print("Digest authentication needed.")
+		}
+
+	}
+	http.HandleFunc("/digestauth", handler)
+}
+*/
+// func KeyFound(m map[string]interface{}, key string) bool {
+// 	_, ok := m[key]
+// 	return ok;
+// }
+
+// func KeyNotFound(m map[string]interface{}, key string) bool {
+// 	_, ok := m[key]
+// 	return !ok;
+// }
+
+func KeyNotFound[T any](m map[string]T) func(key string) bool {
+	return func(key string) bool {
+		_, ok := m[key]
+		return !ok
+	}
+}
+
+/*
+	func DigestAuth(r *http.Request) (authorization.AuthorizationInfo, bool) {
+		authHeader := r.Header.Get("Authorization")
+		var auth authorization.AuthorizationInfo
+		emptyAuthInfo := authorization.AuthorizationInfo{}
+		if authHeader == "" {
+			return auth, false
+		}
+
+		parsed, ok := ParseDigestAuth(authHeader)
+		if !ok {
+			return emptyAuthInfo, false
+		}
+
+		var fieldExists bool
+		if auth.Response, fieldExists = parsed["response"]; !fieldExists {
+			return emptyAuthInfo, false
+		}
+
+		if auth.UserID, fieldExists = parsed["username"]; !fieldExists {
+			return emptyAuthInfo, false
+		}
+
+		if auth.Realm, fieldExists = parsed["realm"]; !fieldExists {
+			return emptyAuthInfo, false
+		}
+
+		if auth.Algorithm, fieldExists = parsed["algorithm"]; !fieldExists {
+			return emptyAuthInfo, false
+		}
+
+		if auth.Qop, fieldExists = parsed["qop"]; !fieldExists {
+			return emptyAuthInfo, false
+		}
+
+		if auth.Cnonce, fieldExists = parsed["cnonce"]; !fieldExists {
+			return emptyAuthInfo, false
+		}
+
+		if auth.Nc, fieldExists = parsed["nc"]; !fieldExists {
+			return emptyAuthInfo, false
+		}
+		return auth, fieldExists
+	}
+*/
+func addFormBasedAuthHandler() {
+	smap := map[string]string{}
+	pmap := map[string]string{"jdoe": "password1"}
+
+	http.HandleFunc("/resource", func(w http.ResponseWriter, req *http.Request) {
+		if cookie, err := req.Cookie("session"); err != nil {
+			w.Header().Add("Location", "/login")
+			w.WriteHeader(http.StatusFound)
+		} else {
+			uid := cookie.Value
+			user := smap[uid]
+			if user != "" {
+				str := fmt.Sprintf("User %s authenticated.", user)
+				log.Default().Printf("Session %s found. Allowing user %s to access", uid, user)
+				io.WriteString(w, str)
+			} else {
+				w.Header().Add("Location", "/login")
+				w.WriteHeader(http.StatusFound)
+			}
+		}
+	})
+
+	http.HandleFunc("/login", func(w http.ResponseWriter, req *http.Request) {
+		form := `<form method="GET" enctype="application/X-WWW-form-urlencoded">
+		<label for="user">Username:</label><br>
+		<input type="text" id="user" name="user"><br>
+		<label for="password">Password:</label><br>
+		<input type="text" id="password" name="password"><br>
+		<input type="submit" value="Submit">
+		</form>`
+		user := req.FormValue("user")
+		pass := req.FormValue("password")
+
+		if user == "" || pass == "" {
+			w.Header().Add("Content-Type", "text/html")
+			w.Write([]byte(form))
+		} else {
+			if pmap[user] == pass {
+				str := fmt.Sprintf("User %s authenticated.", user)
+				log.Default().Print(str)
+				uid := uuid.NewString()
+				log.Default().Printf("No session found. Creating a new session: %s", uid)
+				http.SetCookie(w, &http.Cookie{
+					Name:  "session",
+					Value: uid,
+				})
+				smap[uid] = user
+				w.Header().Add("Location", "/resource")
+				w.WriteHeader(http.StatusFound)
+			} else {
+				str := fmt.Sprintf("User %s failed to authenticate.", user)
+				log.Default().Print(str)
+				w.Header().Add("Content-Type", "text/html")
+				w.Write([]byte(form))
+			}
+		}
+	})
+
 }

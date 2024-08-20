@@ -1,0 +1,124 @@
+package middleware
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"net/http"
+
+	"github.com/NathMcBride/web-authentication/authentication/authenticator"
+	"github.com/NathMcBride/web-authentication/authentication/contexts"
+	"github.com/NathMcBride/web-authentication/authentication/digest"
+	"github.com/NathMcBride/web-authentication/authentication/store"
+	"github.com/NathMcBride/web-authentication/constants"
+	"github.com/NathMcBride/web-authentication/headers/paramlist"
+	"github.com/NathMcBride/web-authentication/providers/credential"
+	"github.com/NathMcBride/web-authentication/providers/secret"
+	"github.com/NathMcBride/web-authentication/providers/username"
+)
+
+type Authenticate struct {
+	Opaque        string
+	Realm         string
+	HashUserName  bool
+	ClientStore   *store.ClientStore
+	Authenticator *authenticator.Authenticator
+}
+
+type DigestHeader struct {
+	Realm     string `hparam:"realm,omitempty"`
+	Algorithm string `hparam:"algorithm,unq,omitempty"`
+	Qop       string `hparam:"qop"`
+	Opaque    string `hparam:"opaque"`
+	Nonce     string `hparam:"nonce"`
+	UserHash  bool   `hparam:"userhash,omitempty"`
+}
+
+func (a *Authenticate) createDigestHeader(nonce string) (string, error) {
+	dh := DigestHeader{
+		Realm:     a.Realm,
+		Algorithm: constants.SHA256,
+		Qop:       constants.Auth,
+		Opaque:    a.Opaque,
+		Nonce:     nonce,
+		UserHash:  a.HashUserName,
+	}
+
+	result, error := paramlist.Marshal(dh)
+	if error != nil {
+		return "", errors.New("marshaling digest header failed")
+	}
+
+	return fmt.Sprintf(`Digest %s`, string(result[:])), nil
+}
+
+func (a *Authenticate) HandleUnauthorized(w http.ResponseWriter, r *http.Request) {
+	nonce := digest.RandomKey()
+	a.ClientStore.Add(nonce)
+
+	header, err := a.createDigestHeader(nonce)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Add(constants.Authenticate, header)
+	w.WriteHeader(http.StatusUnauthorized)
+	log.Default().Print("Digest authentication needed.")
+}
+
+func (a *Authenticate) RequireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, err := a.Authenticator.Authenticate(r)
+		if err != nil {
+			if authenticator.IsAuthenticationError(err) {
+				a.HandleUnauthorized(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if !user.IsAuthenticated {
+			a.HandleUnauthorized(w, r)
+			return
+		}
+
+		ctx := contexts.WithUser(context.Background(), &user)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+type Options struct {
+	Realm              string
+	Opaque             string
+	ShouldHashUsername bool
+}
+
+func NewDigestAuth(o Options) *Authenticate {
+	secretProvider := secret.SecretProviderProvider{}
+	usernameProvider := username.UsernameProvider{Realm: o.Realm}
+	clientStore := store.NewClientStore()
+
+	credentialProvider := credential.CredentialProvider{
+		SecretProvider:   &secretProvider,
+		UsernameProvider: &usernameProvider,
+	}
+
+	authenticator := authenticator.Authenticator{
+		Opaque:             o.Opaque,
+		HashUserName:       o.ShouldHashUsername,
+		CredentialProvider: &credentialProvider,
+	}
+
+	authenticate := Authenticate{
+		Opaque:        o.Opaque,
+		Realm:         o.Realm,
+		HashUserName:  o.ShouldHashUsername,
+		ClientStore:   clientStore,
+		Authenticator: &authenticator,
+	}
+
+	return &authenticate
+}
