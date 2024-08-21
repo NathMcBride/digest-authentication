@@ -3,7 +3,7 @@ package parsers
 import (
 	"strings"
 
-	"github.com/NathMcBride/web-authentication/constants"
+	"github.com/NathMcBride/web-authentication/digest/constants"
 )
 
 func ParseDigestAuth(auth string) (map[string]string, error) {

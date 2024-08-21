@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/NathMcBride/web-authentication/authentication/authenticator"
-	"github.com/NathMcBride/web-authentication/authentication/contexts"
-	"github.com/NathMcBride/web-authentication/authentication/digest"
-	"github.com/NathMcBride/web-authentication/authentication/middleware"
+	"github.com/NathMcBride/web-authentication/digest/authentication/authenticator"
+	"github.com/NathMcBride/web-authentication/digest/authentication/contexts"
+	"github.com/NathMcBride/web-authentication/digest/authentication/digest"
+	"github.com/NathMcBride/web-authentication/digest/authentication/middleware"
 	"github.com/google/uuid"
 	"github.com/k0kubun/pp"
 )

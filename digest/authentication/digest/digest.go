@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/NathMcBride/web-authentication/authentication/hasher"
-	"github.com/NathMcBride/web-authentication/authentication/model"
-	"github.com/NathMcBride/web-authentication/constants"
-	"github.com/NathMcBride/web-authentication/headers/paramlist"
-	"github.com/NathMcBride/web-authentication/providers/credential"
+	"github.com/NathMcBride/web-authentication/digest/authentication/hasher"
+	"github.com/NathMcBride/web-authentication/digest/authentication/model"
+	"github.com/NathMcBride/web-authentication/digest/constants"
+	"github.com/NathMcBride/web-authentication/digest/headers/paramlist"
+	"github.com/NathMcBride/web-authentication/digest/providers/credential"
 )
 
 func Calculate(credentials credential.Credentials, authHeader model.AuthHeader, Method string) (string, error) {

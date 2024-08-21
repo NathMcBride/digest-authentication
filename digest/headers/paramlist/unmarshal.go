@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/NathMcBride/web-authentication/parsers"
+	"github.com/NathMcBride/web-authentication/digest/parsers"
 )
 
 func Unmarshal(data []byte, v any) error {

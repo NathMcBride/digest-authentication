@@ -3,7 +3,7 @@ package contexts
 import (
 	"context"
 
-	"github.com/NathMcBride/web-authentication/authentication/authenticator"
+	"github.com/NathMcBride/web-authentication/digest/authentication/authenticator"
 )
 
 type userCtxKeyType string

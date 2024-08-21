@@ -3,7 +3,7 @@ package username
 import (
 	"errors"
 
-	"github.com/NathMcBride/web-authentication/authentication/hasher"
+	"github.com/NathMcBride/web-authentication/digest/authentication/hasher"
 )
 
 type UsernameProvider struct {

@@ -4,11 +4,11 @@ import (
 	"crypto/subtle"
 	"net/http"
 
-	"github.com/NathMcBride/web-authentication/authentication/digest"
-	"github.com/NathMcBride/web-authentication/authentication/model"
-	"github.com/NathMcBride/web-authentication/constants"
-	"github.com/NathMcBride/web-authentication/headers/paramlist"
-	"github.com/NathMcBride/web-authentication/providers/credential"
+	"github.com/NathMcBride/web-authentication/digest/authentication/digest"
+	"github.com/NathMcBride/web-authentication/digest/authentication/model"
+	"github.com/NathMcBride/web-authentication/digest/constants"
+	"github.com/NathMcBride/web-authentication/digest/headers/paramlist"
+	"github.com/NathMcBride/web-authentication/digest/providers/credential"
 )
 
 type User struct {

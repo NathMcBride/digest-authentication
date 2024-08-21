@@ -1,6 +1,6 @@
 package parsers
 
-import "github.com/NathMcBride/web-authentication/errors"
+import "github.com/NathMcBride/web-authentication/digest/errors"
 
 const (
 	ParsingErrorCode errors.ErrorCode = "Parsing_ERROR"

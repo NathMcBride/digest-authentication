@@ -5,14 +5,14 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/NathMcBride/web-authentication/authentication/authenticator"
-	"github.com/NathMcBride/web-authentication/authentication/contexts"
-	"github.com/NathMcBride/web-authentication/authentication/digest"
-	"github.com/NathMcBride/web-authentication/authentication/store"
-	"github.com/NathMcBride/web-authentication/constants"
-	"github.com/NathMcBride/web-authentication/providers/credential"
-	"github.com/NathMcBride/web-authentication/providers/secret"
-	"github.com/NathMcBride/web-authentication/providers/username"
+	"github.com/NathMcBride/web-authentication/digest/authentication/authenticator"
+	"github.com/NathMcBride/web-authentication/digest/authentication/contexts"
+	"github.com/NathMcBride/web-authentication/digest/authentication/digest"
+	"github.com/NathMcBride/web-authentication/digest/authentication/store"
+	"github.com/NathMcBride/web-authentication/digest/constants"
+	"github.com/NathMcBride/web-authentication/digest/providers/credential"
+	"github.com/NathMcBride/web-authentication/digest/providers/secret"
+	"github.com/NathMcBride/web-authentication/digest/providers/username"
 )
 
 type Authenticate struct {

@@ -1,6 +1,6 @@
 package hasher
 
-import "github.com/NathMcBride/web-authentication/errors"
+import "github.com/NathMcBride/web-authentication/digest/errors"
 
 const (
 	HashingErrorCode errors.ErrorCode = "HASHING_ERROR"

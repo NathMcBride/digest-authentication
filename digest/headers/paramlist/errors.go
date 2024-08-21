@@ -1,6 +1,6 @@
 package paramlist
 
-import "github.com/NathMcBride/web-authentication/errors"
+import "github.com/NathMcBride/web-authentication/digest/errors"
 
 const (
 	MarshalErrorCode   errors.ErrorCode = "MARSHAL_ERROR"
