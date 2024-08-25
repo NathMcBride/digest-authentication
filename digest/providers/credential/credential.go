@@ -1,11 +1,11 @@
 package credential
 
 type SecretProvider interface {
-	GetSecret(userID string) (string, error)
+	GetSecret(userID string) (string, bool, error)
 }
 
 type UsernameProvider interface {
-	GetUserName(usernameHash string) (string, error)
+	GetUserName(usernameHash string) (string, bool, error)
 }
 
 type Credentials struct {
@@ -19,24 +19,24 @@ type CredentialProvider struct {
 }
 
 // example credential provider
-func (c *CredentialProvider) GetCredentials(userID string, useHash bool) (*Credentials, error) {
+func (c *CredentialProvider) GetCredentials(userID string, useHash bool) (*Credentials, bool, error) {
 	username := userID
 	if useHash {
-		plainUsername, err := c.UsernameProvider.GetUserName(userID)
-		if err != nil {
-			return nil, err
+		plainUsername, found, err := c.UsernameProvider.GetUserName(userID)
+		if err != nil || !found {
+			return nil, found, err
 		}
 		username = plainUsername
 	}
 
-	passwd, err := c.SecretProvider.GetSecret(username)
-	if err != nil {
-		return nil, err
+	passwd, found, err := c.SecretProvider.GetSecret(username)
+	if err != nil || !found {
+		return nil, found, err
 	}
 
 	cred := &Credentials{
 		Username: username,
 		Password: passwd,
 	}
-	return cred, nil
+	return cred, true, nil
 }

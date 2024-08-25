@@ -1,8 +1,6 @@
 package username
 
 import (
-	"errors"
-
 	"github.com/NathMcBride/web-authentication/digest/authentication/hasher"
 )
 
@@ -11,17 +9,24 @@ type UsernameProvider struct {
 }
 
 // example UsernameProvider
-func (u *UsernameProvider) GetUserName(usernameHash string) (string, error) {
-	hj, _ := hasher.H("jim" + ":" + u.Realm)
+func (u *UsernameProvider) GetUserName(usernameHash string) (string, bool, error) {
+	hj, err := hasher.H("jim" + ":" + u.Realm)
+	if err != nil {
+		return "", false, err
+	}
 
 	if usernameHash == hj {
-		return "jim", nil
+		return "jim", true, nil
 	}
 
-	hjn, _ := hasher.H("john" + ":" + u.Realm)
+	hjn, err := hasher.H("john" + ":" + u.Realm)
+	if err != nil {
+		return "", false, err
+	}
+
 	if usernameHash == hjn {
-		return "john", nil
+		return "john", true, nil
 	}
 
-	return "", errors.New("no matching user name")
+	return "", false, nil
 }

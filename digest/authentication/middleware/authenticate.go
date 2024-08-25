@@ -40,22 +40,18 @@ func (a *Authenticate) HandleUnauthorized(w http.ResponseWriter, r *http.Request
 
 func (a *Authenticate) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user, err := a.Authenticator.Authenticate(r)
+		session, err := a.Authenticator.Authenticate(r)
 		if err != nil {
-			if authenticator.IsAuthenticationError(err) {
-				a.HandleUnauthorized(w, r)
-				return
-			}
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		if !user.IsAuthenticated {
+		if !session.IsAuthenticated {
 			a.HandleUnauthorized(w, r)
 			return
 		}
 
-		ctx := contexts.WithUser(context.Background(), &user)
+		ctx := contexts.WithSession(context.Background(), &session)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

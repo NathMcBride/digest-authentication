@@ -35,19 +35,23 @@ func somethingProtected(w http.ResponseWriter, r *http.Request) {
 
 func somethingThatNeedsAuthenticatingHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	user := contexts.GetUser(ctx)
-	somethingThatNeedsAuthenticating(w, r, user)
+	session := contexts.GetSession(ctx)
+	somethingThatNeedsAuthenticating(w, r, session)
 }
 
-func somethingThatNeedsAuthenticating(w http.ResponseWriter, r *http.Request, auth *authenticator.User) {
+func somethingThatNeedsAuthenticating(w http.ResponseWriter, r *http.Request, session *authenticator.Session) {
 	log.Print("Executing somethingThatNeedsUser")
-	pp.Println(auth)
+	pp.Println(session)
 	w.Write([]byte("Something that needs a user"))
 }
 
 func somethingPublic(w http.ResponseWriter, r *http.Request) {
 	log.Print("Executing finalHandler")
 	w.Write([]byte("Something public"))
+}
+
+func handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
 
 func main() {
@@ -59,35 +63,15 @@ func main() {
 
 	da := middleware.NewDigestAuth(options)
 
-	// secretProvider := secret.SecretProviderProvider{}
-	// usernameProvider := username.UsernameProvider{Realm: realm}
-
-	// credentialProvider := credential.CredentialProvider{
-	// 	SecretProvider:   &secretProvider,
-	// 	UsernameProvider: &usernameProvider,
-	// }
-
-	// authenticator := authenticator.Authenticator{
-	// 	Opaque:             opaque,
-	// 	HashUserName:       shouldHashUsername,
-	// 	CredentialProvider: &credentialProvider,
-	// }
-
-	// authenticate := middleware.Authenticate{
-	// 	Opaque:        opaque,
-	// 	Realm:         realm,
-	// 	HashUserName:  shouldHashUsername,
-	// 	ClientStore:   clientStore,
-	// 	Authenticator: &authenticator,
-	// }
-
 	mux := http.NewServeMux()
 	finalHandler := http.HandlerFunc(somethingThatNeedsAuthenticatingHandler)
 
 	mux.Handle("/protected", da.RequireAuth(finalHandler))
 	mux.Handle("/public", http.HandlerFunc(somethingPublic))
+	mux.Handle("/health", http.HandlerFunc(handleHealth))
+	mux.Handle("/", http.NotFoundHandler())
 
-	http.ListenAndServe(":8080", mux)
+	log.Fatal(http.ListenAndServe("localhost:8080", mux))
 }
 
 func addSessionHandler() {

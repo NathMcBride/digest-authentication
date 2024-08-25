@@ -1,18 +1,16 @@
 package secret
 
-import "errors"
-
 type SecretProviderProvider struct{}
 
 // example secret provider
-func (p *SecretProviderProvider) GetSecret(userID string) (string, error) {
+func (p *SecretProviderProvider) GetSecret(userID string) (string, bool, error) {
 	if userID == "jim" {
-		return "password", nil
+		return "password", true, nil
 	}
 
 	if userID == "john" {
-		return "cheese", nil
+		return "cheese", true, nil
 	}
 
-	return "", errors.New("unable to find user secret")
+	return "", false, nil
 }

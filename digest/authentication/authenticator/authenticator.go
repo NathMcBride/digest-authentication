@@ -12,7 +12,11 @@ import (
 )
 
 type User struct {
-	UserID          string
+	UserID string
+}
+
+type Session struct {
+	User            User
 	IsAuthenticated bool
 }
 
@@ -22,34 +26,32 @@ type Authenticator struct {
 	CredentialProvider *credential.CredentialProvider
 }
 
-func (auth *Authenticator) Authenticate(r *http.Request) (User, error) {
-	notAuthenticated := func(err error) (User, error) {
-		return User{UserID: "", IsAuthenticated: false}, err
+func (auth *Authenticator) Authenticate(r *http.Request) (Session, error) {
+	notAuthenticated := Session{
+		User:            User{},
+		IsAuthenticated: false,
 	}
 
 	authorization := r.Header.Get(constants.Authorization)
 	if authorization == "" {
-		err := AuthenticationError("authorization not found")
-		return notAuthenticated(err)
+		return notAuthenticated, nil
 	}
 
 	authHeader := model.AuthHeader{}
 	err := paramlist.Unmarshal([]byte(authorization), &authHeader)
 	if err != nil {
-		return notAuthenticated(err)
+		return notAuthenticated, err
 	}
 
-	credentials, err := auth.CredentialProvider.GetCredentials(authHeader.UserID, auth.HashUserName)
-	if err != nil {
-		return notAuthenticated(err)
+	credentials, found, err := auth.CredentialProvider.GetCredentials(authHeader.UserID, auth.HashUserName)
+	if err != nil || !found {
+		return notAuthenticated, err
 	}
 
 	if authHeader.Algorithm != constants.SHA256 ||
 		authHeader.Opaque != auth.Opaque ||
 		authHeader.Qop != constants.Auth {
-		err := AuthenticationError("header mismatch")
-		return notAuthenticated(err)
-
+		return notAuthenticated, nil
 	}
 	/*
 		// Check if the requested URI matches auth header
@@ -75,12 +77,11 @@ func (auth *Authenticator) Authenticate(r *http.Request) (User, error) {
 
 	digest, err := digest.Calculate(*credentials, authHeader, r.Method)
 	if err != nil {
-		return notAuthenticated(err)
+		return notAuthenticated, err
 	}
 
 	if subtle.ConstantTimeCompare([]byte(digest), []byte(authHeader.Response)) != 1 {
-		err := AuthenticationError("calculated digest does not match response")
-		return notAuthenticated(err)
+		return notAuthenticated, nil
 	}
 
 	// At this point crypto checks are completed and validated.
@@ -107,5 +108,12 @@ func (auth *Authenticator) Authenticate(r *http.Request) (User, error) {
 	// info := fmt.Sprintf(`qop="auth", rspauth="%s", cnonce="%s", nc="%s"`, rspauth, auth["cnonce"], auth["nc"])
 	// return auth["username"], &info
 
-	return User{UserID: authHeader.UserID, IsAuthenticated: true}, nil
+	session := Session{
+		User: User{
+			UserID: authHeader.UserID,
+		},
+		IsAuthenticated: true,
+	}
+
+	return session, nil
 }
