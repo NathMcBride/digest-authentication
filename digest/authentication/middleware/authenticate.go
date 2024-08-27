@@ -2,40 +2,29 @@ package middleware
 
 import (
 	"context"
-	"log"
 	"net/http"
 
 	"github.com/NathMcBride/web-authentication/digest/authentication/authenticator"
 	"github.com/NathMcBride/web-authentication/digest/authentication/contexts"
 	"github.com/NathMcBride/web-authentication/digest/authentication/digest"
+	"github.com/NathMcBride/web-authentication/digest/authentication/middleware/handlers"
 	"github.com/NathMcBride/web-authentication/digest/authentication/store"
-	"github.com/NathMcBride/web-authentication/digest/constants"
 	"github.com/NathMcBride/web-authentication/digest/providers/credential"
 	"github.com/NathMcBride/web-authentication/digest/providers/secret"
 	"github.com/NathMcBride/web-authentication/digest/providers/username"
 )
 
-type Authenticate struct {
-	Opaque        string
-	Realm         string
-	HashUserName  bool
-	ClientStore   *store.ClientStore
-	Authenticator *authenticator.Authenticator
+type HandleUnauthorized interface {
+	HandleUnauthorized(w http.ResponseWriter, r *http.Request)
 }
 
-func (a *Authenticate) HandleUnauthorized(w http.ResponseWriter, r *http.Request) {
-	nonce := digest.RandomKey()
-	a.ClientStore.Add(nonce)
+type Authenticator interface {
+	Authenticate(r *http.Request) (authenticator.Session, error)
+}
 
-	header, err := digest.MakeHeader(a.Realm, a.Opaque, nonce, a.HashUserName)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Add(constants.Authenticate, header)
-	w.WriteHeader(http.StatusUnauthorized)
-	log.Default().Print("Digest authentication needed.")
+type Authenticate struct {
+	UnauthorizedHandler HandleUnauthorized
+	Authenticator       Authenticator
 }
 
 func (a *Authenticate) RequireAuth(next http.Handler) http.Handler {
@@ -47,7 +36,7 @@ func (a *Authenticate) RequireAuth(next http.Handler) http.Handler {
 		}
 
 		if !session.IsAuthenticated {
-			a.HandleUnauthorized(w, r)
+			a.UnauthorizedHandler.HandleUnauthorized(w, r)
 			return
 		}
 
@@ -56,15 +45,9 @@ func (a *Authenticate) RequireAuth(next http.Handler) http.Handler {
 	})
 }
 
-type Options struct {
-	Realm              string
-	Opaque             string
-	ShouldHashUsername bool
-}
-
-func NewDigestAuth(o Options) *Authenticate {
+func NewDigestAuth(Realm string, Opaque string, ShouldHashUsername bool) func(http.Handler) http.Handler {
 	secretProvider := secret.SecretProviderProvider{}
-	usernameProvider := username.UsernameProvider{Realm: o.Realm}
+	usernameProvider := username.UsernameProvider{Realm: Realm}
 	clientStore := store.NewClientStore()
 
 	credentialProvider := credential.CredentialProvider{
@@ -72,19 +55,25 @@ func NewDigestAuth(o Options) *Authenticate {
 		UsernameProvider: &usernameProvider,
 	}
 
+	unauthorizedHandler := handlers.UnauthorizedHandler{
+		Opaque:       Opaque,
+		Realm:        Realm,
+		HashUserName: ShouldHashUsername,
+		ClientStore:  clientStore,
+	}
+
+	digest := digest.Digest{}
 	authenticator := authenticator.Authenticator{
-		Opaque:             o.Opaque,
-		HashUserName:       o.ShouldHashUsername,
+		Opaque:             Opaque,
+		HashUserName:       ShouldHashUsername,
 		CredentialProvider: &credentialProvider,
+		Digest:             &digest,
 	}
 
 	authenticate := Authenticate{
-		Opaque:        o.Opaque,
-		Realm:         o.Realm,
-		HashUserName:  o.ShouldHashUsername,
-		ClientStore:   clientStore,
-		Authenticator: &authenticator,
+		UnauthorizedHandler: &unauthorizedHandler,
+		Authenticator:       &authenticator,
 	}
 
-	return &authenticate
+	return authenticate.RequireAuth
 }

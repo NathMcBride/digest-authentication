@@ -53,18 +53,20 @@ func (client *Client) addDigest(username string, password string, dh model.Diges
 	}
 
 	cr := credential.Credentials{Username: username, Password: password}
-	digest, err := digest.Calculate(cr, authHeader, request.Method)
+	digest := digest.Digest{}
+
+	result, err := digest.Calculate(cr, authHeader, request.Method)
 	if err != nil {
 		return err
 	}
-	authHeader.Response = digest
+	authHeader.Response = result
 
-	result, err := paramlist.Marshal(authHeader)
+	marshalled, err := paramlist.Marshal(authHeader)
 	if err != nil {
 		return err
 	}
 
-	request.Header.Add("Authorization", "Digest "+string(result[:]))
+	request.Header.Add("Authorization", "Digest "+string(marshalled[:]))
 	client.nc++
 
 	return nil

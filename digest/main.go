@@ -33,13 +33,17 @@ func somethingProtected(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Something protected"))
 }
 
-func somethingThatNeedsAuthenticatingHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	session := contexts.GetSession(ctx)
-	somethingThatNeedsAuthenticating(w, r, session)
+func someHandler() http.Handler {
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			session := contexts.GetSession(ctx)
+			someThingWithSession(w, r, session)
+		},
+	)
 }
 
-func somethingThatNeedsAuthenticating(w http.ResponseWriter, r *http.Request, session *authenticator.Session) {
+func someThingWithSession(w http.ResponseWriter, r *http.Request, session *authenticator.Session) {
 	log.Print("Executing somethingThatNeedsUser")
 	pp.Println(session)
 	w.Write([]byte("Something that needs a user"))
@@ -55,18 +59,13 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	options := middleware.Options{
-		Realm:              "A-Realm",
-		Opaque:             digest.RandomKey(),
-		ShouldHashUsername: true,
-	}
-
-	da := middleware.NewDigestAuth(options)
+	authMiddleware := middleware.NewDigestAuth(
+		"A-Realm",
+		digest.RandomKey(),
+		true)
 
 	mux := http.NewServeMux()
-	finalHandler := http.HandlerFunc(somethingThatNeedsAuthenticatingHandler)
-
-	mux.Handle("/protected", da.RequireAuth(finalHandler))
+	mux.Handle("/protected", authMiddleware(someHandler()))
 	mux.Handle("/public", http.HandlerFunc(somethingPublic))
 	mux.Handle("/health", http.HandlerFunc(handleHealth))
 	mux.Handle("/", http.NotFoundHandler())

@@ -14,3 +14,5 @@ type AuthHeader struct {
 	UserHash  bool   `hparam:"userhash,omitempty"`
 	// AThing    string `hparam:"-"`
 }
+
+//should the nonce be unquoted?

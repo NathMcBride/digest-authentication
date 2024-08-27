@@ -12,7 +12,9 @@ import (
 	"github.com/NathMcBride/web-authentication/digest/providers/credential"
 )
 
-func Calculate(credentials credential.Credentials, authHeader model.AuthHeader, Method string) (string, error) {
+type Digest struct{}
+
+func (d *Digest) Calculate(credentials credential.Credentials, authHeader model.AuthHeader, Method string) (string, error) {
 	HA1, err := hasher.H(credentials.Username + ":" + authHeader.Realm + ":" + credentials.Password)
 	if err != nil {
 		return "", err

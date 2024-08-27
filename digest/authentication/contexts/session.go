@@ -6,9 +6,7 @@ import (
 	"github.com/NathMcBride/web-authentication/digest/authentication/authenticator"
 )
 
-type sessionCtxKeyType string
-
-const sessionCtxKey sessionCtxKeyType = "session"
+const sessionCtxKey = "session"
 
 func WithSession(ctx context.Context, session *authenticator.Session) context.Context {
 	return context.WithValue(ctx, sessionCtxKey, session)

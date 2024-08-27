@@ -4,7 +4,6 @@ import (
 	"crypto/subtle"
 	"net/http"
 
-	"github.com/NathMcBride/web-authentication/digest/authentication/digest"
 	"github.com/NathMcBride/web-authentication/digest/authentication/model"
 	"github.com/NathMcBride/web-authentication/digest/constants"
 	"github.com/NathMcBride/web-authentication/digest/headers/paramlist"
@@ -20,10 +19,23 @@ type Session struct {
 	IsAuthenticated bool
 }
 
+type CredentialProvider interface {
+	GetCredentials(userID string, useHash bool) (*credential.Credentials, bool, error)
+}
+
+type Digest interface {
+	Calculate(
+		credentials credential.Credentials,
+		authHeader model.AuthHeader,
+		Method string,
+	) (string, error)
+}
+
 type Authenticator struct {
 	Opaque             string
 	HashUserName       bool
-	CredentialProvider *credential.CredentialProvider
+	CredentialProvider CredentialProvider
+	Digest             Digest
 }
 
 func (auth *Authenticator) Authenticate(r *http.Request) (Session, error) {
@@ -40,7 +52,7 @@ func (auth *Authenticator) Authenticate(r *http.Request) (Session, error) {
 	authHeader := model.AuthHeader{}
 	err := paramlist.Unmarshal([]byte(authorization), &authHeader)
 	if err != nil {
-		return notAuthenticated, err
+		return notAuthenticated, nil
 	}
 
 	credentials, found, err := auth.CredentialProvider.GetCredentials(authHeader.UserID, auth.HashUserName)
@@ -75,7 +87,7 @@ func (auth *Authenticator) Authenticate(r *http.Request) (Session, error) {
 			}
 		}*/
 
-	digest, err := digest.Calculate(*credentials, authHeader, r.Method)
+	digest, err := auth.Digest.Calculate(*credentials, authHeader, r.Method)
 	if err != nil {
 		return notAuthenticated, err
 	}
