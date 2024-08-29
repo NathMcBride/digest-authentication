@@ -34,7 +34,8 @@ func (client *Client) addDigest(username string, password string, dh model.Diges
 		client.opaque = dh.Opaque
 	}
 
-	userhash, err := hasher.H(username + ":" + dh.Realm)
+	hasher := hasher.Hasher{}
+	userhash, err := hasher.Hash(username + ":" + dh.Realm)
 	if err != nil {
 		return err
 	}
@@ -53,7 +54,7 @@ func (client *Client) addDigest(username string, password string, dh model.Diges
 	}
 
 	cr := credential.Credentials{Username: username, Password: password}
-	digest := digest.Digest{}
+	digest := digest.Digest{Sha256: &hasher}
 
 	result, err := digest.Calculate(cr, authHeader, request.Method)
 	if err != nil {

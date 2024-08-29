@@ -7,6 +7,7 @@ import (
 	"github.com/NathMcBride/web-authentication/digest/authentication/authenticator"
 	"github.com/NathMcBride/web-authentication/digest/authentication/contexts"
 	"github.com/NathMcBride/web-authentication/digest/authentication/digest"
+	"github.com/NathMcBride/web-authentication/digest/authentication/hasher"
 	"github.com/NathMcBride/web-authentication/digest/authentication/middleware/handlers"
 	"github.com/NathMcBride/web-authentication/digest/authentication/store"
 	"github.com/NathMcBride/web-authentication/digest/providers/credential"
@@ -62,7 +63,9 @@ func NewDigestAuth(Realm string, Opaque string, ShouldHashUsername bool) func(ht
 		ClientStore:  clientStore,
 	}
 
-	digest := digest.Digest{}
+	digest := digest.Digest{
+		Sha256: &hasher.Hasher{},
+	}
 	authenticator := authenticator.Authenticator{
 		Opaque:             Opaque,
 		HashUserName:       ShouldHashUsername,

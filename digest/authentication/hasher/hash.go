@@ -5,7 +5,10 @@ import (
 	"fmt"
 )
 
-func H(data string) (string, error) {
+type Hasher struct {
+}
+
+func (h *Hasher) Hash(data string) (string, error) {
 	digest := sha256.New()
 
 	_, err := digest.Write([]byte(data))

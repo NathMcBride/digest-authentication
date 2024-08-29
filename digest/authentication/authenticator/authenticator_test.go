@@ -31,6 +31,11 @@ func (fcp *FakeCredentialProvider) GetCredentialsReturns(credentials *credential
 	fcp.getCredentialsReturns.err = err
 }
 
+func (fcp *FakeCredentialProvider) GetCredentialsArgsForCall(i int) (string, bool) {
+	args := fcp.argsForCall[i]
+	return args.userID, args.useHash
+}
+
 func (fcp *FakeCredentialProvider) GetCredentials(userID string, useHash bool) (*credential.Credentials, bool, error) {
 	fcp.callCount++
 
@@ -64,6 +69,11 @@ func (fd *FakeDigest) CalculateReturns(digest string, err error) {
 	fd.calculateReturns.err = err
 }
 
+func (fd *FakeDigest) CalculateArgsForCall(i int) (credential.Credentials, model.AuthHeader, string) {
+	args := fd.argsForCall[i]
+	return args.credentials, args.authHeader, args.Method
+}
+
 func (fd *FakeDigest) Calculate(credentials credential.Credentials, authHeader model.AuthHeader, Method string) (string, error) {
 	fd.callCount++
 
@@ -87,7 +97,7 @@ realm="a-realm",
 algorithm=SHA-256,
 qop=auth,
 cnonce="a-client-nonce",
-nc=0,
+nc=6,
 opaque="an-opaque-value",
 uri="a-uri",
 nonce="a-nonce-value",
@@ -155,6 +165,18 @@ var _ = Describe("Authenticator", func() {
 		})
 
 		Describe("Call to GetCredentials", func() {
+			Context("called with", func() {
+				It("was called correctly", func() {
+					request.Header.Add("Authorization", SuccessAuthorizationHeader)
+
+					theAuthenticator.Authenticate(request)
+
+					userId, shouldHash := fakeCredentialsProvider.GetCredentialsArgsForCall(0)
+					Expect(userId).To(Equal("a-username"))
+					Expect(shouldHash).To(BeTrue())
+				})
+			})
+
 			Context("on error", func() {
 				It("returns an error and an unauthorized session", func() {
 					request.Header.Add("Authorization", SuccessAuthorizationHeader)
@@ -228,6 +250,25 @@ var _ = Describe("Authenticator", func() {
 		})
 
 		Describe("Call to Calculate digest", func() {
+			Context("called with", func() {
+				It("was called correctly", func() {
+					request.Header.Add("Authorization", SuccessAuthorizationHeader)
+
+					theAuthenticator.Authenticate(request)
+
+					credentials, authHeader, method := fakeDigest.CalculateArgsForCall(0)
+					Expect(credentials.Username).To(Equal("a-plain-username"))
+					Expect(credentials.Password).To(Equal("a-password"))
+					Expect(authHeader.Realm).To(Equal("a-realm"))
+					Expect(authHeader.Uri).To(Equal("a-uri"))
+					Expect(authHeader.Nonce).To(Equal("a-nonce-value"))
+					Expect(authHeader.Nc).To(Equal("6"))
+					Expect(authHeader.Cnonce).To(Equal("a-client-nonce"))
+					Expect(authHeader.Qop).To(Equal("auth"))
+					Expect(method).To(Equal("GET"))
+				})
+			})
+
 			Context("on error", func() {
 				It("returns an error and an unauthorized session", func() {
 					request.Header.Add("Authorization", SuccessAuthorizationHeader)

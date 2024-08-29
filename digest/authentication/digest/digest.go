@@ -5,22 +5,27 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/NathMcBride/web-authentication/digest/authentication/hasher"
 	"github.com/NathMcBride/web-authentication/digest/authentication/model"
 	"github.com/NathMcBride/web-authentication/digest/constants"
 	"github.com/NathMcBride/web-authentication/digest/headers/paramlist"
 	"github.com/NathMcBride/web-authentication/digest/providers/credential"
 )
 
-type Digest struct{}
+type Hasher interface {
+	Hash(data string) (string, error)
+}
+
+type Digest struct {
+	Sha256 Hasher
+}
 
 func (d *Digest) Calculate(credentials credential.Credentials, authHeader model.AuthHeader, Method string) (string, error) {
-	HA1, err := hasher.H(credentials.Username + ":" + authHeader.Realm + ":" + credentials.Password)
+	HA1, err := d.Sha256.Hash(credentials.Username + ":" + authHeader.Realm + ":" + credentials.Password)
 	if err != nil {
 		return "", err
 	}
 
-	HA2, err := hasher.H(Method + ":" + authHeader.Uri)
+	HA2, err := d.Sha256.Hash(Method + ":" + authHeader.Uri)
 	if err != nil {
 		return "", err
 	}
@@ -28,7 +33,7 @@ func (d *Digest) Calculate(credentials credential.Credentials, authHeader model.
 	list := []string{HA1, authHeader.Nonce, authHeader.Nc, authHeader.Cnonce, authHeader.Qop, HA2}
 	digest := strings.Join(list, ":")
 
-	KD, err := hasher.H(digest)
+	KD, err := d.Sha256.Hash(digest)
 	if err != nil {
 		return "", err
 	}
