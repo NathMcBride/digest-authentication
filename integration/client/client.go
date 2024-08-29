@@ -40,12 +40,13 @@ func (client *Client) addDigest(username string, password string, dh model.Diges
 		return err
 	}
 
+	randomKey := digest.RandomKey{}
 	authHeader := model.AuthHeader{
 		UserID:    userhash,
 		Realm:     dh.Realm,
 		Algorithm: dh.Algorithm,
 		Qop:       dh.Qop,
-		Cnonce:    digest.RandomKey(),
+		Cnonce:    randomKey.Create(),
 		Nc:        fmt.Sprintf("%d", client.nc),
 		Opaque:    client.opaque,
 		Uri:       request.RequestURI,
@@ -53,8 +54,8 @@ func (client *Client) addDigest(username string, password string, dh model.Diges
 		UserHash:  true,
 	}
 
-	cr := credential.Credentials{Username: username, Password: password}
 	digest := digest.Digest{Sha256: &hasher}
+	cr := credential.Credentials{Username: username, Password: password}
 
 	result, err := digest.Calculate(cr, authHeader, request.Method)
 	if err != nil {

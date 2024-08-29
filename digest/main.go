@@ -59,9 +59,10 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	key := digest.RandomKey{}
 	authMiddleware := middleware.NewDigestAuth(
 		"A-Realm",
-		digest.RandomKey(),
+		key.Create(),
 		true)
 
 	mux := http.NewServeMux()

@@ -7,8 +7,8 @@ import (
 	"github.com/NathMcBride/web-authentication/digest/authentication/authenticator"
 	"github.com/NathMcBride/web-authentication/digest/authentication/contexts"
 	"github.com/NathMcBride/web-authentication/digest/authentication/digest"
+	"github.com/NathMcBride/web-authentication/digest/authentication/handlers"
 	"github.com/NathMcBride/web-authentication/digest/authentication/hasher"
-	"github.com/NathMcBride/web-authentication/digest/authentication/middleware/handlers"
 	"github.com/NathMcBride/web-authentication/digest/authentication/store"
 	"github.com/NathMcBride/web-authentication/digest/providers/credential"
 	"github.com/NathMcBride/web-authentication/digest/providers/secret"
@@ -50,22 +50,25 @@ func NewDigestAuth(Realm string, Opaque string, ShouldHashUsername bool) func(ht
 	secretProvider := secret.SecretProviderProvider{}
 	usernameProvider := username.UsernameProvider{Realm: Realm}
 	clientStore := store.NewClientStore()
+	randomKeyCreator := digest.RandomKey{}
+	digest := digest.Digest{
+		Sha256: &hasher.Hasher{},
+	}
+
+	unauthorizedHandler := handlers.UnauthorizedHandler{
+		Opaque:        Opaque,
+		Realm:         Realm,
+		HashUserName:  ShouldHashUsername,
+		ClientStore:   &clientStore,
+		RandomKey:     &randomKeyCreator,
+		DigestCreator: &digest,
+	}
 
 	credentialProvider := credential.CredentialProvider{
 		SecretProvider:   &secretProvider,
 		UsernameProvider: &usernameProvider,
 	}
 
-	unauthorizedHandler := handlers.UnauthorizedHandler{
-		Opaque:       Opaque,
-		Realm:        Realm,
-		HashUserName: ShouldHashUsername,
-		ClientStore:  clientStore,
-	}
-
-	digest := digest.Digest{
-		Sha256: &hasher.Hasher{},
-	}
 	authenticator := authenticator.Authenticator{
 		Opaque:             Opaque,
 		HashUserName:       ShouldHashUsername,

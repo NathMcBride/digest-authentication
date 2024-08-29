@@ -5,7 +5,10 @@ import (
 	"encoding/base64"
 )
 
-func RandomKey() string {
+type RandomKey struct {
+}
+
+func (r *RandomKey) Create() string {
 	b := make([]byte, 12)
 
 	_, err := rand.Read(b)

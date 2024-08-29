@@ -41,7 +41,7 @@ func (d *Digest) Calculate(credentials credential.Credentials, authHeader model.
 	return KD, nil
 }
 
-func MakeHeader(realm string, opaque string, nonce string, shouldHashUserName bool) (string, error) {
+func (d *Digest) CreateChallenge(realm string, opaque string, nonce string, shouldHashUserName bool) (string, error) {
 	dh := model.DigestHeader{
 		Realm:     realm,
 		Algorithm: constants.SHA256,

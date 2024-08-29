@@ -26,8 +26,8 @@ func (c *ClientStore) Delete(entry string) {
 	delete(c.clients, entry)
 }
 
-func NewClientStore() *ClientStore {
-	return &ClientStore{
+func NewClientStore() ClientStore {
+	return ClientStore{
 		clients: make(map[string]struct{}),
 	}
 }
