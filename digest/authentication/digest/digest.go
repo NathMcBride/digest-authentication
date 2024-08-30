@@ -12,20 +12,20 @@ import (
 )
 
 type Hasher interface {
-	Hash(data string) (string, error)
+	Do(data string) (string, error)
 }
 
 type Digest struct {
-	Sha256 Hasher
+	Hasher Hasher
 }
 
 func (d *Digest) Calculate(credentials credential.Credentials, authHeader model.AuthHeader, Method string) (string, error) {
-	HA1, err := d.Sha256.Hash(credentials.Username + ":" + authHeader.Realm + ":" + credentials.Password)
+	HA1, err := d.Hasher.Do(credentials.Username + ":" + authHeader.Realm + ":" + credentials.Password)
 	if err != nil {
 		return "", err
 	}
 
-	HA2, err := d.Sha256.Hash(Method + ":" + authHeader.Uri)
+	HA2, err := d.Hasher.Do(Method + ":" + authHeader.Uri)
 	if err != nil {
 		return "", err
 	}
@@ -33,7 +33,7 @@ func (d *Digest) Calculate(credentials credential.Credentials, authHeader model.
 	list := []string{HA1, authHeader.Nonce, authHeader.Nc, authHeader.Cnonce, authHeader.Qop, HA2}
 	digest := strings.Join(list, ":")
 
-	KD, err := d.Sha256.Hash(digest)
+	KD, err := d.Hasher.Do(digest)
 	if err != nil {
 		return "", err
 	}

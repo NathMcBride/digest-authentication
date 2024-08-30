@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/NathMcBride/web-authentication/digest/authentication/authenticator"
+	"github.com/NathMcBride/web-authentication/digest/authentication/contexts"
 	"github.com/NathMcBride/web-authentication/digest/authentication/middleware"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -105,7 +106,7 @@ var _ = Describe("Authenticate middleware", func() {
 				Expect(fakeNextHandler.callCount).To(Equal(1))
 				r := fakeNextHandler.argsForCall[0].request
 
-				session, ok := r.Context().Value("session").(*authenticator.Session)
+				session, ok := r.Context().Value(contexts.SessionCtxKey).(*authenticator.Session)
 				Expect(ok).To(BeTrue(), "Session not found")
 
 				Expect(session.User.UserID).To(Equal("a-test-user"))

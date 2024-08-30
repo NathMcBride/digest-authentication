@@ -51,8 +51,11 @@ func NewDigestAuth(Realm string, Opaque string, ShouldHashUsername bool) func(ht
 	usernameProvider := username.UsernameProvider{Realm: Realm}
 	clientStore := store.NewClientStore()
 	randomKeyCreator := digest.RandomKey{}
+	sha256Factory := hasher.Sha256Factory{}
 	digest := digest.Digest{
-		Sha256: &hasher.Hasher{},
+		Hasher: &hasher.Hash{
+			CryptoFactory: &sha256Factory,
+		},
 	}
 
 	unauthorizedHandler := handlers.UnauthorizedHandler{

@@ -10,8 +10,10 @@ type UsernameProvider struct {
 
 // example UsernameProvider
 func (u *UsernameProvider) GetUserName(usernameHash string) (string, bool, error) {
-	hasher := hasher.Hasher{}
-	hj, err := hasher.Hash("jim" + ":" + u.Realm)
+	hasher := hasher.Hash{
+		CryptoFactory: &hasher.Sha256Factory{},
+	}
+	hj, err := hasher.Do("jim" + ":" + u.Realm)
 	if err != nil {
 		return "", false, err
 	}
@@ -20,7 +22,7 @@ func (u *UsernameProvider) GetUserName(usernameHash string) (string, bool, error
 		return "jim", true, nil
 	}
 
-	hjn, err := hasher.Hash("john" + ":" + u.Realm)
+	hjn, err := hasher.Do("john" + ":" + u.Realm)
 	if err != nil {
 		return "", false, err
 	}

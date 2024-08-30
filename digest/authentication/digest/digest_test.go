@@ -11,41 +11,41 @@ import (
 )
 
 type FakeHasher struct {
-	callCount          int
-	argsForCall        []struct{ data string }
-	hashReturnsForCall map[int]struct {
+	callCount        int
+	argsForCall      []struct{ data string }
+	doReturnsForCall map[int]struct {
 		hash string
 		err  error
 	}
 }
 
-func (fh *FakeHasher) HashCallCount() int {
+func (fh *FakeHasher) DoCallCount() int {
 	return fh.callCount
 }
 
-func (fh *FakeHasher) HashArgsForCall(i int) string {
+func (fh *FakeHasher) DoArgsForCall(i int) string {
 	return fh.argsForCall[i].data
 }
 
-func (fh *FakeHasher) HashReturnsOnCall(i int, hash string, err error) {
-	if fh.hashReturnsForCall == nil {
-		fh.hashReturnsForCall = make(map[int]struct {
+func (fh *FakeHasher) DoReturnsOnCall(i int, hash string, err error) {
+	if fh.doReturnsForCall == nil {
+		fh.doReturnsForCall = make(map[int]struct {
 			hash string
 			err  error
 		})
 	}
 
-	fh.hashReturnsForCall[i] = struct {
+	fh.doReturnsForCall[i] = struct {
 		hash string
 		err  error
 	}{hash: hash, err: err}
 }
 
-func (fh *FakeHasher) Hash(data string) (string, error) {
+func (fh *FakeHasher) Do(data string) (string, error) {
 	fh.callCount++
 	fh.argsForCall = append(fh.argsForCall, struct{ data string }{data})
 
-	ret, hasReturn := fh.hashReturnsForCall[fh.callCount-1]
+	ret, hasReturn := fh.doReturnsForCall[fh.callCount-1]
 	if hasReturn {
 		return ret.hash, ret.err
 	}
@@ -61,11 +61,11 @@ var _ = Describe("Digest calculation RFC7616", func() {
 
 	BeforeEach(func() {
 		fakeHasher = &FakeHasher{}
-		fakeHasher.HashReturnsOnCall(0, "a-ha1-hash", nil)
-		fakeHasher.HashReturnsOnCall(1, "a-ha2-hash", nil)
-		fakeHasher.HashReturnsOnCall(2, "a-kd-hash", nil)
+		fakeHasher.DoReturnsOnCall(0, "a-ha1-hash", nil)
+		fakeHasher.DoReturnsOnCall(1, "a-ha2-hash", nil)
+		fakeHasher.DoReturnsOnCall(2, "a-kd-hash", nil)
 
-		theDigest = &digest.Digest{Sha256: fakeHasher}
+		theDigest = &digest.Digest{Hasher: fakeHasher}
 	})
 
 	Context("on success", func() {
@@ -84,12 +84,12 @@ var _ = Describe("Digest calculation RFC7616", func() {
 
 			theDigest.Calculate(credentials, authHeader, "")
 
-			args := fakeHasher.HashArgsForCall(0)
+			args := fakeHasher.DoArgsForCall(0)
 			Expect(args).To(Equal("a-username:a-realm:a-password"))
 		})
 
 		It("returns an error", func() {
-			fakeHasher.HashReturnsOnCall(0, "", fmt.Errorf("hashing failed"))
+			fakeHasher.DoReturnsOnCall(0, "", fmt.Errorf("hashing failed"))
 
 			_, err := theDigest.Calculate(credential.Credentials{}, model.AuthHeader{}, "")
 
@@ -104,12 +104,12 @@ var _ = Describe("Digest calculation RFC7616", func() {
 
 			theDigest.Calculate(credentials, authHeader, "a-http-method")
 
-			args := fakeHasher.HashArgsForCall(1)
+			args := fakeHasher.DoArgsForCall(1)
 			Expect(args).To(Equal("a-http-method:a-uri"))
 		})
 
 		It("returns an error", func() {
-			fakeHasher.HashReturnsOnCall(1, "", fmt.Errorf("hashing failed"))
+			fakeHasher.DoReturnsOnCall(1, "", fmt.Errorf("hashing failed"))
 
 			_, err := theDigest.Calculate(credential.Credentials{}, model.AuthHeader{}, "")
 
@@ -128,13 +128,13 @@ var _ = Describe("Digest calculation RFC7616", func() {
 
 			theDigest.Calculate(credentials, authHeader, "")
 
-			args := fakeHasher.HashArgsForCall(2)
+			args := fakeHasher.DoArgsForCall(2)
 			expected := "a-ha1-hash:a-nonce-value:a-nonce-count:a-client-nonce:a-qop:a-ha2-hash"
 			Expect(args).To(Equal(expected))
 		})
 
 		It("returns an error", func() {
-			fakeHasher.HashReturnsOnCall(2, "", fmt.Errorf("hashing failed"))
+			fakeHasher.DoReturnsOnCall(2, "", fmt.Errorf("hashing failed"))
 
 			_, err := theDigest.Calculate(credential.Credentials{}, model.AuthHeader{}, "")
 
