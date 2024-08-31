@@ -1,15 +1,17 @@
 package hasher
 
-import "github.com/NathMcBride/web-authentication/digest/errors"
+import (
+	"github.com/NathMcBride/web-authentication/digest/domainerror"
+)
 
 const (
-	HashingErrorCode errors.ErrorCode = "HASHING_ERROR"
+	HashingErrorCode domainerror.ErrorCode = "HASHING_ERROR"
 )
 
 func IsHashingError(err error) bool {
-	return errors.Code(err) == HashingErrorCode
+	return domainerror.Code(err) == HashingErrorCode
 }
 
 func HashingError() error {
-	return errors.NewDomainError(HashingErrorCode, "failed to hash")
+	return domainerror.NewDomainError(HashingErrorCode, "failed to hash")
 }

@@ -1,16 +1,16 @@
 package authenticator
 
-import "github.com/NathMcBride/web-authentication/digest/errors"
+import "github.com/NathMcBride/web-authentication/digest/domainerror"
 
 const (
-	AuthenticationErrorCode errors.ErrorCode = "AUTHENTICATION_ERROR"
-	HeaderNotFound          errors.ErrorCode = "HEADER_NOT_FOUND"
+	AuthenticationErrorCode domainerror.ErrorCode = "AUTHENTICATION_ERROR"
+	HeaderNotFound          domainerror.ErrorCode = "HEADER_NOT_FOUND"
 )
 
 func IsAuthenticationError(err error) bool {
-	return errors.Code(err) == AuthenticationErrorCode
+	return domainerror.Code(err) == AuthenticationErrorCode
 }
 
 func AuthenticationError(val string) error {
-	return errors.NewDomainError(AuthenticationErrorCode, "failed to authenticate: %s", val)
+	return domainerror.NewDomainError(AuthenticationErrorCode, "failed to authenticate: %s", val)
 }

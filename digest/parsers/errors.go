@@ -1,15 +1,17 @@
 package parsers
 
-import "github.com/NathMcBride/web-authentication/digest/errors"
+import (
+	"github.com/NathMcBride/web-authentication/digest/domainerror"
+)
 
 const (
-	ParsingErrorCode errors.ErrorCode = "Parsing_ERROR"
+	ParsingErrorCode domainerror.ErrorCode = "Parsing_ERROR"
 )
 
 func IsParsingError(err error) bool {
-	return errors.Code(err) == ParsingErrorCode
+	return domainerror.Code(err) == ParsingErrorCode
 }
 
 func ParsingError() error {
-	return errors.NewDomainError(ParsingErrorCode, "failed to parse")
+	return domainerror.NewDomainError(ParsingErrorCode, "failed to parse")
 }

@@ -8,6 +8,8 @@ import (
 	"github.com/NathMcBride/web-authentication/digest/authentication/hasher"
 	"github.com/NathMcBride/web-authentication/digest/authentication/model"
 	"github.com/NathMcBride/web-authentication/digest/headers/paramlist"
+	"github.com/NathMcBride/web-authentication/digest/headers/paramlist/structinfo"
+	"github.com/NathMcBride/web-authentication/digest/headers/paramlist/structmarshal"
 	"github.com/NathMcBride/web-authentication/digest/providers/credential"
 )
 
@@ -67,7 +69,10 @@ func (client *Client) addDigest(username string, password string, dh model.Diges
 	}
 	authHeader.Response = result
 
-	marhsaler := paramlist.Marshaler{}
+	marhsaler := paramlist.Marshaler{
+		StructInfoer:    &structinfo.StructInfo{},
+		StructMarshaler: &structmarshal.StructMarshal{},
+	}
 	marshalled, err := marhsaler.Marshal(authHeader)
 	if err != nil {
 		return err

@@ -1,7 +1,8 @@
-package errors
+package domainerror
 
 import "fmt"
 
+// Test
 type ErrorCode string
 
 type domainError struct {

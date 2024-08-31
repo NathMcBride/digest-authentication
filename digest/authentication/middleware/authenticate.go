@@ -12,6 +12,8 @@ import (
 	"github.com/NathMcBride/web-authentication/digest/authentication/store"
 	"github.com/NathMcBride/web-authentication/digest/headers"
 	"github.com/NathMcBride/web-authentication/digest/headers/paramlist"
+	"github.com/NathMcBride/web-authentication/digest/headers/paramlist/structinfo"
+	"github.com/NathMcBride/web-authentication/digest/headers/paramlist/structmarshal"
 	"github.com/NathMcBride/web-authentication/digest/providers/credential"
 	"github.com/NathMcBride/web-authentication/digest/providers/secret"
 	"github.com/NathMcBride/web-authentication/digest/providers/username"
@@ -48,21 +50,21 @@ func (a *Authenticate) RequireAuth(next http.Handler) http.Handler {
 	})
 }
 
+// refactor
 func NewDigestAuth(Realm string, Opaque string, ShouldHashUsername bool) func(http.Handler) http.Handler {
 	secretProvider := secret.SecretProviderProvider{}
 	usernameProvider := username.UsernameProvider{Realm: Realm}
-	clientStore := store.NewClientStore()
-	randomKeyCreator := digest.RandomKey{}
-	sha256Factory := hasher.Sha256Factory{}
-	digest := digest.Digest{
-		Hasher: &hasher.Hash{
-			CryptoFactory: &sha256Factory,
+
+	structInfo := structinfo.StructInfo{}
+	structMarshal := structmarshal.StructMarshal{}
+	challenge := headers.DigestChallenge{
+		Marshaler: &paramlist.Marshaler{
+			StructInfoer:    &structInfo,
+			StructMarshaler: &structMarshal,
 		},
 	}
-
-	challenge := headers.DigestChallenge{
-		Marshaler: &paramlist.Marshaler{},
-	}
+	clientStore := store.NewClientStore()
+	randomKeyCreator := digest.RandomKey{}
 	unauthorizedHandler := handlers.UnauthorizedHandler{
 		Opaque:           Opaque,
 		Realm:            Realm,
@@ -76,7 +78,12 @@ func NewDigestAuth(Realm string, Opaque string, ShouldHashUsername bool) func(ht
 		SecretProvider:   &secretProvider,
 		UsernameProvider: &usernameProvider,
 	}
-
+	sha256Factory := hasher.Sha256Factory{}
+	digest := digest.Digest{
+		Hasher: &hasher.Hash{
+			CryptoFactory: &sha256Factory,
+		},
+	}
 	authenticator := authenticator.Authenticator{
 		Opaque:             Opaque,
 		HashUserName:       ShouldHashUsername,

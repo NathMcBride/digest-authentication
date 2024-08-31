@@ -5,17 +5,20 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/NathMcBride/web-authentication/digest/headers/paramlist/errors"
+	"github.com/NathMcBride/web-authentication/digest/headers/paramlist/structinfo"
 	"github.com/NathMcBride/web-authentication/digest/parsers"
 )
 
+// Test
 func Unmarshal(data []byte, v any) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Pointer {
-		return UnmarshalError("not a pointer")
+		return errors.UnmarshalError("not a pointer")
 	}
 
 	if val.IsNil() {
-		return UnmarshalError("nil pointer")
+		return errors.UnmarshalError("nil pointer")
 	}
 
 	parsed, err := parsers.ParseDigestAuth(string(data))
@@ -25,7 +28,8 @@ func Unmarshal(data []byte, v any) error {
 
 	val = val.Elem()
 	typ := val.Type()
-	tinfo := GetTypeInfo(typ)
+	s := structinfo.StructInfo{}
+	tinfo := s.GetTypeInfo(typ)
 
 	for i := range tinfo.Fields {
 		finfo := &tinfo.Fields[i]
@@ -47,7 +51,7 @@ func Unmarshal(data []byte, v any) error {
 			}
 			value, err := strconv.ParseBool(strings.TrimSpace(string(src)))
 			if err != nil {
-				return UnmarshalError("unable to parse bool")
+				return errors.UnmarshalError("unable to parse bool")
 			}
 			vf.SetBool(value)
 		}
