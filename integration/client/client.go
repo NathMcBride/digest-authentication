@@ -67,7 +67,8 @@ func (client *Client) addDigest(username string, password string, dh model.Diges
 	}
 	authHeader.Response = result
 
-	marshalled, err := paramlist.Marshal(authHeader)
+	marhsaler := paramlist.Marshaler{}
+	marshalled, err := marhsaler.Marshal(authHeader)
 	if err != nil {
 		return err
 	}

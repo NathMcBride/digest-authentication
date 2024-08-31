@@ -2,7 +2,6 @@ package paramlist
 
 import (
 	"bytes"
-	"encoding"
 	"reflect"
 	"strconv"
 	"strings"
@@ -28,27 +27,15 @@ const (
 	fMode = fElement | fUnq | fOmitEmpty
 )
 
-var textMarshalerType = reflect.TypeFor[encoding.TextMarshaler]()
+type Marshaler struct{}
 
-func Marshal(v any) ([]byte, error) {
+func (m *Marshaler) Marshal(v any) ([]byte, error) {
 	val := reflect.ValueOf(v)
 	if !val.IsValid() {
 		return nil, MarshalError("invalid value passed to marshal")
 	}
-	typ := val.Type()
 
-	// Check for text marshaler.
-	if val.CanInterface() && typ.Implements(textMarshalerType) {
-		return val.Interface().(encoding.TextMarshaler).MarshalText()
-	}
-	if val.CanAddr() {
-		pv := val.Addr()
-		if pv.CanInterface() && pv.Type().Implements(textMarshalerType) {
-			return pv.Interface().(encoding.TextMarshaler).MarshalText()
-		}
-	}
-
-	tinfo := GetTypeInfo(typ)
+	tinfo := GetTypeInfo(val.Type())
 	buffer := new(bytes.Buffer)
 
 	err := MarshalStruct(buffer, tinfo, val)

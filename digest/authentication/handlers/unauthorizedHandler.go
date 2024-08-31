@@ -10,8 +10,8 @@ type RandomKeyCreator interface {
 	Create() string
 }
 
-type DigestCreator interface {
-	CreateChallenge(realm string, opaque string, nonce string, shouldHashUserName bool) (string, error)
+type ChallengeCreator interface {
+	Create(realm string, opaque string, nonce string, shouldHashUserName bool) (string, error)
 }
 
 type ClientStore interface {
@@ -21,19 +21,19 @@ type ClientStore interface {
 }
 
 type UnauthorizedHandler struct {
-	Opaque        string
-	Realm         string
-	HashUserName  bool
-	ClientStore   ClientStore
-	RandomKey     RandomKeyCreator
-	DigestCreator DigestCreator
+	Opaque           string
+	Realm            string
+	HashUserName     bool
+	ClientStore      ClientStore
+	RandomKey        RandomKeyCreator
+	ChallengeCreator ChallengeCreator
 }
 
 func (ua *UnauthorizedHandler) HandleUnauthorized(w http.ResponseWriter, r *http.Request) {
 	nonce := ua.RandomKey.Create()
 	ua.ClientStore.Add(nonce)
 
-	header, err := ua.DigestCreator.CreateChallenge(ua.Realm, ua.Opaque, nonce, ua.HashUserName)
+	header, err := ua.ChallengeCreator.Create(ua.Realm, ua.Opaque, nonce, ua.HashUserName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

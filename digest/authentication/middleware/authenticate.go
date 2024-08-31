@@ -10,6 +10,8 @@ import (
 	"github.com/NathMcBride/web-authentication/digest/authentication/handlers"
 	"github.com/NathMcBride/web-authentication/digest/authentication/hasher"
 	"github.com/NathMcBride/web-authentication/digest/authentication/store"
+	"github.com/NathMcBride/web-authentication/digest/headers"
+	"github.com/NathMcBride/web-authentication/digest/headers/paramlist"
 	"github.com/NathMcBride/web-authentication/digest/providers/credential"
 	"github.com/NathMcBride/web-authentication/digest/providers/secret"
 	"github.com/NathMcBride/web-authentication/digest/providers/username"
@@ -58,13 +60,16 @@ func NewDigestAuth(Realm string, Opaque string, ShouldHashUsername bool) func(ht
 		},
 	}
 
+	challenge := headers.DigestChallenge{
+		Marshaler: &paramlist.Marshaler{},
+	}
 	unauthorizedHandler := handlers.UnauthorizedHandler{
-		Opaque:        Opaque,
-		Realm:         Realm,
-		HashUserName:  ShouldHashUsername,
-		ClientStore:   &clientStore,
-		RandomKey:     &randomKeyCreator,
-		DigestCreator: &digest,
+		Opaque:           Opaque,
+		Realm:            Realm,
+		HashUserName:     ShouldHashUsername,
+		ClientStore:      &clientStore,
+		RandomKey:        &randomKeyCreator,
+		ChallengeCreator: &challenge,
 	}
 
 	credentialProvider := credential.CredentialProvider{
