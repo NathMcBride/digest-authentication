@@ -1,4 +1,4 @@
-module github.com/NathMcBride/web-authentication
+module github.com/NathMcBride/digest-authentication
 
 go 1.22.5
 

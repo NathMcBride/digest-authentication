@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/NathMcBride/web-authentication/digest/authentication/digest"
-	"github.com/NathMcBride/web-authentication/digest/authentication/hasher"
-	"github.com/NathMcBride/web-authentication/digest/authentication/model"
-	"github.com/NathMcBride/web-authentication/digest/headers/paramlist"
-	"github.com/NathMcBride/web-authentication/digest/headers/paramlist/structinfo"
-	"github.com/NathMcBride/web-authentication/digest/headers/paramlist/structmarshal"
-	"github.com/NathMcBride/web-authentication/digest/providers/credential"
+	"github.com/NathMcBride/digest-authentication/src/authentication/digest"
+	"github.com/NathMcBride/digest-authentication/src/authentication/hasher"
+	"github.com/NathMcBride/digest-authentication/src/authentication/model"
+	"github.com/NathMcBride/digest-authentication/src/headers/paramlist"
+	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/structinfo"
+	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/structmarshal"
+	"github.com/NathMcBride/digest-authentication/src/providers/credential"
 )
 
 type Client struct {

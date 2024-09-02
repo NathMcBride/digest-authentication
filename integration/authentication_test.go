@@ -3,9 +3,9 @@ package integration_test
 import (
 	"net/http"
 
-	"github.com/NathMcBride/web-authentication/digest/authentication/model"
-	"github.com/NathMcBride/web-authentication/digest/headers/paramlist"
-	"github.com/NathMcBride/web-authentication/integration/client"
+	"github.com/NathMcBride/digest-authentication/integration/client"
+	"github.com/NathMcBride/digest-authentication/src/authentication/model"
+	"github.com/NathMcBride/digest-authentication/src/headers/paramlist"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

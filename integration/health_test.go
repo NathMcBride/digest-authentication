@@ -3,7 +3,7 @@ package integration_test
 import (
 	"net/http"
 
-	"github.com/NathMcBride/web-authentication/integration/client"
+	"github.com/NathMcBride/digest-authentication/integration/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

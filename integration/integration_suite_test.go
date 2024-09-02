@@ -3,7 +3,7 @@ package integration_test
 import (
 	"os/exec"
 
-	. "github.com/NathMcBride/web-authentication/integration/support"
+	. "github.com/NathMcBride/digest-authentication/integration/support"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -18,7 +18,7 @@ const healthCheck = "http://localhost:8080/health"
 
 var _ = BeforeSuite(func() {
 	var err error
-	path, err = gexec.Build("github.com/NathMcBride/web-authentication/digest")
+	path, err = gexec.Build("github.com/NathMcBride/digest-authentication/src")
 	Expect(err).NotTo(HaveOccurred())
 
 	DeferCleanup(gexec.CleanupBuildArtifacts)
