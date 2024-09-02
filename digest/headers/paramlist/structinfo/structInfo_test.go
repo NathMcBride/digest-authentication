@@ -19,8 +19,8 @@ var _ = Describe("Struct information", func() {
 
 	It("gets type information", func() {
 		val := struct {
-			TestField1 string `httpparam:"testfield"`
-			TestField2 string `httpparam:"testfield2"`
+			Field1 string `httpparam:"testfield"`
+			Field2 string `httpparam:"testfield2"`
 		}{}
 
 		info := structInfo.GetTypeInfo(reflect.TypeOf(val))
@@ -41,7 +41,7 @@ var _ = Describe("Struct information", func() {
 	Context("field name", func() {
 		It("uses the field name provided in tag", func() {
 			val := struct {
-				TestField string `httpparam:"renamed"`
+				Field string `httpparam:"renamed"`
 			}{}
 
 			info := structInfo.GetTypeInfo(reflect.TypeOf(val))
@@ -52,17 +52,17 @@ var _ = Describe("Struct information", func() {
 
 		It("uses the field name if no new name provided", func() {
 			val := struct {
-				TestField1 string `httpparam`
-				TestField2 string `httpparam:,unq`
+				Field1 string `httpparam`
+				Field2 string `httpparam:,unq`
 			}{}
 
 			info := structInfo.GetTypeInfo(reflect.TypeOf(val))
 
 			f1 := info.Fields[0]
-			Expect(f1.Name).To(Equal("TestField1"))
+			Expect(f1.Name).To(Equal("Field1"))
 
 			f2 := info.Fields[1]
-			Expect(f2.Name).To(Equal("TestField2"))
+			Expect(f2.Name).To(Equal("Field2"))
 		})
 	})
 
