@@ -25,6 +25,8 @@ const (
 	FMode = FElement | FUnq | FOmitEmpty
 )
 
+var tagKey = "httpparam"
+
 type StructInfo struct {
 }
 
@@ -34,7 +36,7 @@ func (si *StructInfo) GetTypeInfo(typ reflect.Type) *Info {
 		n := typ.NumField()
 		for i := 0; i < n; i++ {
 			f := typ.Field(i)
-			if (!f.IsExported() && !f.Anonymous) || f.Tag.Get("hparam") == "-" {
+			if (!f.IsExported() && !f.Anonymous) || f.Tag.Get(tagKey) == "-" {
 				continue
 			}
 
@@ -47,7 +49,7 @@ func (si *StructInfo) GetTypeInfo(typ reflect.Type) *Info {
 
 func (si *StructInfo) FieldInfo(f *reflect.StructField) *FieldInfo {
 	finfo := &FieldInfo{Idx: f.Index}
-	tag := f.Tag.Get("hparam")
+	tag := f.Tag.Get(tagKey)
 
 	tokens := strings.Split(tag, ",")
 	if len(tokens) == 1 {

@@ -1,17 +1,17 @@
 package model
 
 type AuthHeader struct {
-	Response  string `hparam:"response"`
-	UserID    string `hparam:"username"`
-	Realm     string `hparam:"realm,omitempty"`
-	Algorithm string `hparam:"algorithm,unq"`
-	Qop       string `hparam:"qop"`
-	Cnonce    string `hparam:"cnonce"`
-	Nc        string `hparam:"nc"`
-	Opaque    string `hparam:"opaque"`
-	Uri       string `hparam:"uri"`
-	Nonce     string `hparam:"nonce,unq,omitempty"`
-	UserHash  bool   `hparam:"userhash,omitempty"`
+	Response  string `httpparam:"response"`
+	UserID    string `httpparam:"username"`
+	Realm     string `httpparam:"realm,omitempty"`
+	Algorithm string `httpparam:"algorithm,unq"`
+	Qop       string `httpparam:"qop"`
+	Cnonce    string `httpparam:"cnonce"`
+	Nc        string `httpparam:"nc"`
+	Opaque    string `httpparam:"opaque"`
+	Uri       string `httpparam:"uri"`
+	Nonce     string `httpparam:"nonce,unq,omitempty"`
+	UserHash  bool   `httpparam:"userhash,omitempty"`
 	// AThing    string `hparam:"-"`
 }
 
