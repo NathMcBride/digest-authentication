@@ -13,40 +13,28 @@ import (
 var _ = Describe("Marshal a struct", func() {
 	var (
 		structMarshal structmarshal.StructMarshal
-		toMarshal     struct{ Field1 string }
+		toMarshal     TestStruct
 		buffer        *bytes.Buffer
 	)
 
 	BeforeEach(func() {
 		buffer = new(bytes.Buffer)
 		structMarshal = structmarshal.StructMarshal{}
-		toMarshal = struct {
-			Field1 string
-		}{"some-value"}
+		toMarshal = TestStruct{"some-value"}
 	})
 
 	It("can successfully marshal a struct", func() {
-		info := structinfo.Info{
-			Fields: []structinfo.FieldInfo{
-				{Idx: []int{0},
-					Name:  "field1",
-					Flags: 0},
-			},
-		}
+		info := NewMakeStructInfo().WithNoFlags().Build()
 
 		err := structMarshal.Marshal(buffer, &info, reflect.ValueOf(toMarshal))
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(buffer.Bytes()[:])).To(Equal(`field1="some-value"`))
+		Expect(string(buffer.Bytes()[:])).To(Equal(`field="some-value"`))
 	})
 
 	When("info argument contains no fields", func() {
 		It("returns nil & the buffer is empty", func() {
-			info := structinfo.Info{Fields: []structinfo.FieldInfo{}}
-
-			toMarshal := struct {
-				Field1 string
-			}{"some-value"}
+			info := NewMakeStructInfo().Build()
 
 			err := structMarshal.Marshal(buffer, &info, reflect.ValueOf(toMarshal))
 
@@ -56,9 +44,7 @@ var _ = Describe("Marshal a struct", func() {
 	})
 
 	DescribeTable("Processing flags",
-		func(i structinfo.Info, t struct {
-			Field string
-		}, expected string) {
+		func(i structinfo.Info, t TestStruct, expected string) {
 			b := new(bytes.Buffer)
 			err := structMarshal.Marshal(b, &i, reflect.ValueOf(t))
 
@@ -66,44 +52,20 @@ var _ = Describe("Marshal a struct", func() {
 			Expect(string(b.Bytes()[:])).To(Equal(expected))
 		},
 		Entry("FUnq",
-			structinfo.Info{
-				Fields: []structinfo.FieldInfo{
-					{Idx: []int{0},
-						Name:  "field",
-						Flags: structinfo.FUnq},
-				}},
-			struct {
-				Field string
-			}{"some-value"}, `field=some-value`),
+			NewMakeStructInfo().WithFUnqFlag().Build(),
+			TestStruct{"some-value"},
+			`field=some-value`),
 		Entry("FOmitEmpty",
-			structinfo.Info{
-				Fields: []structinfo.FieldInfo{
-					{Idx: []int{0},
-						Name:  "field",
-						Flags: structinfo.FOmitEmpty},
-				}},
-			struct {
-				Field string
-			}{""}, ""),
+			NewMakeStructInfo().WithFOmitEmptyFlag().Build(),
+			TestStruct{""},
+			""),
 		Entry("FUnq | FOmitEmpty - with empty field",
-			structinfo.Info{
-				Fields: []structinfo.FieldInfo{
-					{Idx: []int{0},
-						Name:  "field",
-						Flags: structinfo.FUnq | structinfo.FOmitEmpty},
-				}},
-			struct {
-				Field string
-			}{""}, ""),
+			NewMakeStructInfo().WithAllFlags().Build(),
+			TestStruct{""},
+			""),
 		Entry("FUnq | FOmitEmpty - with value in field",
-			structinfo.Info{
-				Fields: []structinfo.FieldInfo{
-					{Idx: []int{0},
-						Name:  "field",
-						Flags: structinfo.FUnq | structinfo.FOmitEmpty},
-				}},
-			struct {
-				Field string
-			}{"some-value"}, "field=some-value"),
+			NewMakeStructInfo().WithAllFlags().Build(),
+			TestStruct{"some-value"},
+			"field=some-value"),
 	)
 })
