@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 
 	"github.com/NathMcBride/digest-authentication/src/authentication/authenticator"
 	"github.com/NathMcBride/digest-authentication/src/authentication/model"
@@ -91,17 +92,51 @@ func (fd *FakeDigest) Calculate(credentials credential.Credentials, authHeader m
 	return r.digest, r.err
 }
 
-var SuccessAuthorizationHeader = `Digest response="a-digest-response",
-username="a-username",
-realm="a-realm",
-algorithm=SHA-256,
-qop=auth,
-cnonce="a-client-nonce",
-nc=6,
-opaque="an-opaque-value",
-uri="a-uri",
-nonce="a-nonce-value",
-userhash=true`
+type FakeUnmarshaler struct {
+	unmarshaledValue   any
+	unmarshalCallCount int
+	unmarshalReturns   struct {
+		err error
+	}
+	unmarshalArgsForCall []struct {
+		data []byte
+		v    any
+	}
+}
+
+func (um *FakeUnmarshaler) UnmarshalArgsForCall(i int) ([]byte, any) {
+	args := um.unmarshalArgsForCall[i]
+	return args.data, args.v
+}
+
+func (um *FakeUnmarshaler) UnmarshalCallCount() int {
+	return um.unmarshalCallCount
+}
+
+func (um *FakeUnmarshaler) UnmarshalReturns(err error) {
+	um.unmarshalReturns = struct{ err error }{err}
+}
+
+func (um *FakeUnmarshaler) UnmarshalUnmarshaledValue(v any) {
+	um.unmarshaledValue = v
+}
+
+func (um *FakeUnmarshaler) Unmarshal(data []byte, v any) error {
+	um.unmarshalCallCount++
+	um.unmarshalArgsForCall = append(um.unmarshalArgsForCall, struct {
+		data []byte
+		v    any
+	}{data, v})
+
+	val := reflect.ValueOf(v)
+	if val.Kind() == reflect.Pointer {
+		if um.unmarshaledValue != nil {
+			val.Elem().Set(reflect.ValueOf(um.unmarshaledValue))
+		}
+	}
+
+	return um.unmarshalReturns.err
+}
 
 var _ = Describe("Authenticator", func() {
 
@@ -109,9 +144,12 @@ var _ = Describe("Authenticator", func() {
 		var (
 			fakeCredentialsProvider *FakeCredentialProvider
 			fakeDigest              *FakeDigest
+			fakeUnmarshaler         *FakeUnmarshaler
+			successAuthHeader       model.AuthHeader
 			request                 *http.Request
 			theAuthenticator        authenticator.Authenticator
 		)
+
 		BeforeEach(func() {
 			fakeCredentialsProvider = &FakeCredentialProvider{}
 			fakeCredentialsProvider.GetCredentialsReturns(
@@ -124,19 +162,31 @@ var _ = Describe("Authenticator", func() {
 
 			fakeDigest = &FakeDigest{}
 			fakeDigest.CalculateReturns("a-digest-response", nil)
+
+			fakeUnmarshaler = &FakeUnmarshaler{}
+			successAuthHeader = model.AuthHeader{
+				UserID:    "a-username",
+				Algorithm: "SHA-256",
+				Opaque:    "an-opaque-value",
+				Qop:       "auth",
+				Response:  "a-digest-response",
+			}
+
+			fakeUnmarshaler.UnmarshalUnmarshaledValue(successAuthHeader)
+
 			theAuthenticator = authenticator.Authenticator{
 				Opaque:             "an-opaque-value",
 				HashUserName:       true,
 				CredentialProvider: fakeCredentialsProvider,
 				Digest:             fakeDigest,
+				Unmarshaller:       fakeUnmarshaler,
 			}
 
 			request = httptest.NewRequest("GET", "http://valid", nil)
+			request.Header.Add("Authorization", "some-authorization")
 		})
 
 		It("successfully authenticates a request", func() {
-			request.Header.Add("Authorization", SuccessAuthorizationHeader)
-
 			session, err := theAuthenticator.Authenticate(request)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -146,6 +196,8 @@ var _ = Describe("Authenticator", func() {
 
 		When("the authorization header is missing", func() {
 			It("returns an unauthorized session", func() {
+				request.Header.Del("Authorization")
+
 				session, err := theAuthenticator.Authenticate(request)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -153,22 +205,35 @@ var _ = Describe("Authenticator", func() {
 			})
 		})
 
-		When("the authorization header is malformed", func() {
-			It("returns an unauthorized session", func() {
-				request.Header.Add("Authorization", "cheese")
+		Describe("Call to Unmarshal", func() {
+			It("is called with the expected arguments", func() {
+				expected := model.AuthHeader{UserID: "a-userido"}
+				fakeUnmarshaler.UnmarshalUnmarshaledValue(expected)
 
-				session, err := theAuthenticator.Authenticate(request)
+				theAuthenticator.Authenticate(request)
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(session.IsAuthenticated).To(BeFalse())
+				Expect(fakeUnmarshaler.UnmarshalCallCount()).To(Equal(1))
+				data, value := fakeUnmarshaler.UnmarshalArgsForCall(0)
+
+				Expect(string(data[:])).To(Equal("some-authorization"))
+				Expect(*value.(*model.AuthHeader)).To(Equal(expected))
+			})
+
+			When("unmarshaling fails", func() {
+				It("returns an unauthorized session", func() {
+					fakeUnmarshaler.UnmarshalReturns(fmt.Errorf("an-error"))
+
+					session, err := theAuthenticator.Authenticate(request)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(session.IsAuthenticated).To(BeFalse())
+				})
 			})
 		})
 
 		Describe("Call to GetCredentials", func() {
 			Context("called with", func() {
 				It("was called correctly", func() {
-					request.Header.Add("Authorization", SuccessAuthorizationHeader)
-
 					theAuthenticator.Authenticate(request)
 
 					userId, shouldHash := fakeCredentialsProvider.GetCredentialsArgsForCall(0)
@@ -179,7 +244,6 @@ var _ = Describe("Authenticator", func() {
 
 			Context("on error", func() {
 				It("returns an error and an unauthorized session", func() {
-					request.Header.Add("Authorization", SuccessAuthorizationHeader)
 					fakeCredentialsProvider.GetCredentialsReturns(nil, false, fmt.Errorf("an-error-occurred"))
 
 					session, err := theAuthenticator.Authenticate(request)
@@ -191,7 +255,6 @@ var _ = Describe("Authenticator", func() {
 
 			Context("on not found", func() {
 				It("returns an unauthorized session", func() {
-					request.Header.Add("Authorization", SuccessAuthorizationHeader)
 					fakeCredentialsProvider.GetCredentialsReturns(nil, false, nil)
 
 					session, err := theAuthenticator.Authenticate(request)
@@ -201,77 +264,61 @@ var _ = Describe("Authenticator", func() {
 				})
 			})
 		})
-		//table test?
-		Describe("authorization header validation", func() {
-			When("the hash algorithm is not supported", func() {
-				It("returns and unauthorized session", func() {
-					unsupportedAlgorithm := `Digest ,
-					algorithm=not-a-real-algorithm,
-					qop=auth,
-					opaque="an-opaque-value"`
-					request.Header.Add("Authorization", unsupportedAlgorithm)
 
-					session, err := theAuthenticator.Authenticate(request)
+		DescribeTable("authorization header validation",
+			func(header model.AuthHeader, expected bool) {
+				fakeUnmarshaler.UnmarshalUnmarshaledValue(header)
 
-					Expect(err).NotTo(HaveOccurred())
-					Expect(session.IsAuthenticated).To(BeFalse())
-				})
-			})
+				session, err := theAuthenticator.Authenticate(request)
 
-			When("the opaque value does not match", func() {
-				It("returns and unauthorized session", func() {
-					unsupportedAlgorithm := `Digest ,
-					algorithm=SHA-256,
-					qop=auth,
-					opaque="opaque-value-mismatch"`
-					request.Header.Add("Authorization", unsupportedAlgorithm)
-
-					session, err := theAuthenticator.Authenticate(request)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(session.IsAuthenticated).To(BeFalse())
-				})
-			})
-
-			When("the qop value is not supported", func() {
-				It("returns and unauthorized session", func() {
-					unsupportedAlgorithm := `Digest ,
-					algorithm=SHA-256,
-					qop=not-supported,
-					opaque="an-opaque-value"`
-					request.Header.Add("Authorization", unsupportedAlgorithm)
-
-					session, err := theAuthenticator.Authenticate(request)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(session.IsAuthenticated).To(BeFalse())
-				})
-			})
-		})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(session.IsAuthenticated).To(Equal(expected))
+			},
+			Entry("Should authenticate",
+				model.AuthHeader{
+					Algorithm: "SHA-256",
+					Opaque:    "an-opaque-value",
+					Qop:       "auth",
+					Response:  "a-digest-response",
+				}, true),
+			Entry("invalid algorithm",
+				model.AuthHeader{
+					Algorithm: "not-a-real-algorithm",
+					Qop:       "auth",
+					Opaque:    "an-opaque-value",
+					Response:  "a-digest-response",
+				}, false),
+			Entry("opaque value does not match",
+				model.AuthHeader{
+					Algorithm: "SHA-256",
+					Qop:       "auth",
+					Opaque:    "opaque-value-mismatch",
+					Response:  "a-digest-response",
+				}, false),
+			Entry("unsupported qop",
+				model.AuthHeader{
+					Algorithm: "SHA-256",
+					Qop:       "not-supported",
+					Opaque:    "an-opaque-value",
+					Response:  "a-digest-response",
+				}, false),
+		)
 
 		Describe("Call to Calculate digest", func() {
 			Context("called with", func() {
 				It("was called correctly", func() {
-					request.Header.Add("Authorization", SuccessAuthorizationHeader)
-
 					theAuthenticator.Authenticate(request)
 
 					credentials, authHeader, method := fakeDigest.CalculateArgsForCall(0)
 					Expect(credentials.Username).To(Equal("a-plain-username"))
 					Expect(credentials.Password).To(Equal("a-password"))
-					Expect(authHeader.Realm).To(Equal("a-realm"))
-					Expect(authHeader.Uri).To(Equal("a-uri"))
-					Expect(authHeader.Nonce).To(Equal("a-nonce-value"))
-					Expect(authHeader.Nc).To(Equal("6"))
-					Expect(authHeader.Cnonce).To(Equal("a-client-nonce"))
-					Expect(authHeader.Qop).To(Equal("auth"))
+					Expect(authHeader).To(Equal(successAuthHeader))
 					Expect(method).To(Equal("GET"))
 				})
 			})
 
 			Context("on error", func() {
 				It("returns an error and an unauthorized session", func() {
-					request.Header.Add("Authorization", SuccessAuthorizationHeader)
 					fakeDigest.CalculateReturns("", fmt.Errorf("calculate-digest-error"))
 
 					session, err := theAuthenticator.Authenticate(request)
@@ -283,7 +330,6 @@ var _ = Describe("Authenticator", func() {
 
 			Context("calculated digest does not match received response", func() {
 				It("returns and unauthorized session", func() {
-					request.Header.Add("Authorization", SuccessAuthorizationHeader)
 					fakeDigest.CalculateReturns("a-mismatching-digest", nil)
 
 					session, err := theAuthenticator.Authenticate(request)

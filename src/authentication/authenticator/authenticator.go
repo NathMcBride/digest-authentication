@@ -6,7 +6,6 @@ import (
 
 	"github.com/NathMcBride/digest-authentication/src/authentication/model"
 	"github.com/NathMcBride/digest-authentication/src/constants"
-	"github.com/NathMcBride/digest-authentication/src/headers/paramlist"
 	"github.com/NathMcBride/digest-authentication/src/providers/credential"
 )
 
@@ -31,11 +30,16 @@ type Digest interface {
 	) (string, error)
 }
 
+type Unmarshaler interface {
+	Unmarshal(data []byte, v any) error
+}
+
 type Authenticator struct {
 	Opaque             string
 	HashUserName       bool
 	CredentialProvider CredentialProvider
 	Digest             Digest
+	Unmarshaller       Unmarshaler
 }
 
 func (auth *Authenticator) Authenticate(r *http.Request) (Session, error) {
@@ -50,7 +54,7 @@ func (auth *Authenticator) Authenticate(r *http.Request) (Session, error) {
 	}
 
 	authHeader := model.AuthHeader{}
-	err := paramlist.Unmarshal([]byte(authorization), &authHeader)
+	err := auth.Unmarshaller.Unmarshal([]byte(authorization), &authHeader)
 	if err != nil {
 		return notAuthenticated, nil
 	}
@@ -65,27 +69,8 @@ func (auth *Authenticator) Authenticate(r *http.Request) (Session, error) {
 		authHeader.Qop != constants.Auth {
 		return notAuthenticated, nil
 	}
-	/*
-		// Check if the requested URI matches auth header
-		if r.RequestURI != auth["uri"] {
-			// We allow auth["uri"] to be a full path prefix of request-uri
-			// for some reason lost in history, which is probably wrong, but
-			// used to be like that for quite some time
-			// (https://tools.ietf.org/html/rfc2617#section-3.2.2 explicitly
-			// says that auth["uri"] is the request-uri).
-			//
-			// TODO: make an option to allow only strict checking.
-			switch u, err := url.Parse(auth["uri"]); {
-			case err != nil:
-				return "", nil
-			case r.URL == nil:
-				return "", nil
-			case len(u.Path) > len(r.URL.Path):
-				return "", nil
-			case !strings.HasPrefix(r.URL.Path, u.Path):
-				return "", nil
-			}
-		}*/
+
+	//Add checks to validate uri
 
 	digest, err := auth.Digest.Calculate(*credentials, authHeader, r.Method)
 	if err != nil {
@@ -96,29 +81,7 @@ func (auth *Authenticator) Authenticate(r *http.Request) (Session, error) {
 		return notAuthenticated, nil
 	}
 
-	// At this point crypto checks are completed and validated.
-	// Now check if the session is valid.
-
-	// nc, err := strconv.ParseUint(auth["nc"], 16, 64)
-	// if err != nil {
-	// 	return "", nil
-	// }
-
-	// client, ok := da.clients[auth["nonce"]]
-	// if !ok {
-	// 	return "", nil
-	// }
-	// if client.nc != 0 && client.nc >= nc && !da.IgnoreNonceCount {
-	// 	return "", nil
-	// }
-	// client.nc = nc
-	// client.lastSeen = time.Now().UnixNano()
-
-	// respHA2 := H(":" + auth["uri"])
-	// rspauth := H(strings.Join([]string{HA1, auth["nonce"], auth["nc"], auth["cnonce"], auth["qop"], respHA2}, ":"))
-
-	// info := fmt.Sprintf(`qop="auth", rspauth="%s", cnonce="%s", nc="%s"`, rspauth, auth["cnonce"], auth["nc"])
-	// return auth["username"], &info
+	//Add checks to validate session
 
 	session := Session{
 		User: User{

@@ -6,12 +6,18 @@ import (
 	"strings"
 
 	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/errors"
-	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/structinfo"
-	"github.com/NathMcBride/digest-authentication/src/parsers"
 )
 
-// Test
-func Unmarshal(data []byte, v any) error {
+type Parser interface {
+	Parse(auth string) (map[string]string, error)
+}
+
+type UnMarshaler struct {
+	StructInfoer StructInfoer
+	Parser       Parser
+}
+
+func (um *UnMarshaler) Unmarshal(data []byte, v any) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Pointer {
 		return errors.UnmarshalError("not a pointer")
@@ -21,16 +27,15 @@ func Unmarshal(data []byte, v any) error {
 		return errors.UnmarshalError("nil pointer")
 	}
 
-	parsed, err := parsers.ParseDigestAuth(string(data))
+	parsed, err := um.Parser.Parse(string(data))
 	if err != nil {
 		return err
 	}
 
 	val = val.Elem()
 	typ := val.Type()
-	s := structinfo.StructInfo{}
-	tinfo := s.GetTypeInfo(typ)
 
+	tinfo := um.StructInfoer.GetTypeInfo(typ)
 	for i := range tinfo.Fields {
 		finfo := &tinfo.Fields[i]
 
@@ -40,7 +45,6 @@ func Unmarshal(data []byte, v any) error {
 		}
 
 		src := parsed[finfo.Name]
-
 		switch vf.Kind() {
 		case reflect.String:
 			vf.SetString(src)
@@ -55,7 +59,6 @@ func Unmarshal(data []byte, v any) error {
 			}
 			vf.SetBool(value)
 		}
-
 	}
 
 	return nil

@@ -6,6 +6,8 @@ import (
 	"github.com/NathMcBride/digest-authentication/integration/client"
 	"github.com/NathMcBride/digest-authentication/src/authentication/model"
 	"github.com/NathMcBride/digest-authentication/src/headers/paramlist"
+	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/structinfo"
+	"github.com/NathMcBride/digest-authentication/src/parsers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -15,6 +17,11 @@ var _ = Describe("Authentication", func() {
 
 	Describe("GET /protected", func() {
 		Context("with no credentials", func() {
+			unmarshaler := paramlist.UnMarshaler{
+				StructInfoer: &structinfo.StructInfo{},
+				Parser:       &parsers.Parser{},
+			}
+
 			client := client.Client{
 				Endpoint:           "http://localhost:8080",
 				ShouldAuthenticate: false}
@@ -31,8 +38,9 @@ var _ = Describe("Authentication", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				digestHeader := model.DigestHeader{}
-				buffer := []byte(resp.Header.Get("WWW-Authenticate"))
-				err = paramlist.Unmarshal(buffer, &digestHeader)
+				err = unmarshaler.Unmarshal(
+					[]byte(resp.Header.Get("WWW-Authenticate")),
+					&digestHeader)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(digestHeader.Realm).To(Equal("A-Realm"))

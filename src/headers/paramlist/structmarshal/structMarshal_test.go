@@ -6,6 +6,7 @@ import (
 
 	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/structinfo"
 	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/structmarshal"
+	. "github.com/NathMcBride/digest-authentication/src/headers/paramlist/support"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

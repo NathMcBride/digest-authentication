@@ -10,6 +10,7 @@ import (
 	"github.com/NathMcBride/digest-authentication/src/headers/paramlist"
 	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/structinfo"
 	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/structmarshal"
+	"github.com/NathMcBride/digest-authentication/src/parsers"
 	"github.com/NathMcBride/digest-authentication/src/providers/credential"
 )
 
@@ -118,8 +119,14 @@ func (client *Client) doRequest(request *http.Request) (*http.Response, error) {
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized && client.ShouldAuthenticate {
+		unmarshaler := paramlist.UnMarshaler{
+			StructInfoer: &structinfo.StructInfo{},
+			Parser:       &parsers.Parser{},
+		}
+
 		dh := model.DigestHeader{}
-		paramlist.Unmarshal([]byte(resp.Header.Get("WWW-Authenticate")), &dh)
+
+		unmarshaler.Unmarshal([]byte(resp.Header.Get("WWW-Authenticate")), &dh)
 		client.addDigest(client.Username, client.Password, dh, request)
 
 		resp, err := http.DefaultClient.Do(request)

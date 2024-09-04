@@ -1,4 +1,4 @@
-package structmarshal_test
+package support
 
 import "github.com/NathMcBride/digest-authentication/src/headers/paramlist/structinfo"
 
@@ -33,7 +33,7 @@ func (ms *MakeStructInfo) AddField(name string, flags structinfo.FieldFlags) *Ma
 	idx := 0
 	length := len(ms.Info.Fields)
 	if length > 0 {
-		idx = length + 1
+		idx = length
 	}
 
 	ms.Info.Fields = append(ms.Info.Fields,

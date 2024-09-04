@@ -14,6 +14,7 @@ import (
 	"github.com/NathMcBride/digest-authentication/src/headers/paramlist"
 	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/structinfo"
 	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/structmarshal"
+	"github.com/NathMcBride/digest-authentication/src/parsers"
 	"github.com/NathMcBride/digest-authentication/src/providers/credential"
 	"github.com/NathMcBride/digest-authentication/src/providers/secret"
 	"github.com/NathMcBride/digest-authentication/src/providers/username"
@@ -84,11 +85,16 @@ func NewDigestAuth(Realm string, Opaque string, ShouldHashUsername bool) func(ht
 			CryptoFactory: &sha256Factory,
 		},
 	}
+	unmarshaler := paramlist.UnMarshaler{
+		StructInfoer: &structinfo.StructInfo{},
+		Parser:       &parsers.Parser{},
+	}
 	authenticator := authenticator.Authenticator{
 		Opaque:             Opaque,
 		HashUserName:       ShouldHashUsername,
 		CredentialProvider: &credentialProvider,
 		Digest:             &digest,
+		Unmarshaller:       &unmarshaler,
 	}
 
 	authenticate := Authenticate{
