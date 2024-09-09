@@ -5,11 +5,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/NathMcBride/digest-authentication/src/constants"
 	"github.com/NathMcBride/digest-authentication/src/headers/paramlist/errors"
 )
 
 type Parser interface {
-	Parse(auth string) (map[string]string, error)
+	ParseList(toParse string, prefix string) (map[string]string, error)
 }
 
 type UnMarshaler struct {
@@ -27,7 +28,7 @@ func (um *UnMarshaler) Unmarshal(data []byte, v any) error {
 		return errors.UnmarshalError("nil pointer")
 	}
 
-	parsed, err := um.Parser.Parse(string(data))
+	parsed, err := um.Parser.ParseList(string(data), constants.Digest+" ")
 	if err != nil {
 		return err
 	}

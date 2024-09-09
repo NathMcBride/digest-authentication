@@ -4,8 +4,6 @@ import (
 	"strings"
 )
 
-// Test
-
 // ParsePairs extracts key/value pairs from a comma-separated list of
 // values as described by RFC 2068 and returns a map[key]value. The
 // resulting values are unquoted. If a list element doesn't contain a
@@ -13,9 +11,9 @@ import (
 // string.
 //
 // Lifted from https://code.google.com/p/gorilla/source/browse/http/parser/parser.go
-func ParseHTTPPairs(value string) map[string]string {
+func HTTPPairs(value string) map[string]string {
 	m := make(map[string]string)
-	for _, pair := range ParseHTTPList(strings.TrimSpace(value)) {
+	for _, pair := range HTTPList(strings.TrimSpace(value)) {
 		switch i := strings.Index(pair, "="); {
 		case i < 0:
 			// No '=' in pair, treat whole string as a 'key'.

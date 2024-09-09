@@ -5,15 +5,13 @@ import (
 	"strings"
 )
 
-// Test
-
 // ParseList parses a comma-separated list of values as described by
 // RFC 2068 and returns list elements.
 //
 // Lifted from https://code.google.com/p/gorilla/source/browse/http/parser/parser.go
 // which was ported from urllib2.parse_http_list, from the Python
 // standard library.
-func ParseHTTPList(value string) []string {
+func HTTPList(value string) []string {
 	var list []string
 	var escape, quote bool
 	b := new(bytes.Buffer)

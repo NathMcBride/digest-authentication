@@ -12,20 +12,23 @@ import (
 )
 
 type FakeParser struct {
-	callCount    int
-	parseReturns struct {
+	callCount        int
+	parseListReturns struct {
 		parsed map[string]string
 		err    error
 	}
-	parseArgsForCall []struct{ auth string }
+	parseListArgsForCall []struct {
+		auth   string
+		prefix string
+	}
 }
 
-func (p *FakeParser) ParseCallCount() int {
+func (p *FakeParser) ParseListCallCount() int {
 	return p.callCount
 }
 
-func (p *FakeParser) ParseReturns(parsed map[string]string, err error) {
-	p.parseReturns = struct {
+func (p *FakeParser) ParseListReturns(parsed map[string]string, err error) {
+	p.parseListReturns = struct {
 		parsed map[string]string
 		err    error
 	}{
@@ -34,15 +37,18 @@ func (p *FakeParser) ParseReturns(parsed map[string]string, err error) {
 	}
 }
 
-func (p *FakeParser) ParseArgsForCall(i int) string {
-	args := p.parseArgsForCall[i]
-	return args.auth
+func (p *FakeParser) ParseListArgsForCall(i int) (string, string) {
+	args := p.parseListArgsForCall[i]
+	return args.auth, args.prefix
 }
 
-func (p *FakeParser) Parse(auth string) (map[string]string, error) {
+func (p *FakeParser) ParseList(auth string, prefix string) (map[string]string, error) {
 	p.callCount++
-	p.parseArgsForCall = append(p.parseArgsForCall, struct{ auth string }{auth})
-	return p.parseReturns.parsed, p.parseReturns.err
+	p.parseListArgsForCall = append(p.parseListArgsForCall, struct {
+		auth   string
+		prefix string
+	}{auth, prefix})
+	return p.parseListReturns.parsed, p.parseListReturns.err
 }
 
 var _ = Describe("Unmarshal", func() {
@@ -63,7 +69,7 @@ var _ = Describe("Unmarshal", func() {
 		}{}
 
 		fakeParser = &FakeParser{}
-		fakeParser.ParseReturns(
+		fakeParser.ParseListReturns(
 			map[string]string{
 				"field":  "a-parsed-value",
 				"field2": "true",
@@ -114,19 +120,20 @@ var _ = Describe("Unmarshal", func() {
 
 	Describe("calling Parse", func() {
 		It("is called with the expected arguments", func() {
-			fakeParser.ParseReturns(map[string]string{}, nil)
+			fakeParser.ParseListReturns(map[string]string{}, nil)
 			fakeStructInfoer.GetTypeInfoReturns(structinfo.Info{})
 
 			unmarshaler.Unmarshal([]byte("some data"), &struct{}{})
 
-			Expect(fakeParser.ParseCallCount()).To(Equal(1))
-			data := fakeParser.ParseArgsForCall(0)
-			Expect(data).To(Equal("some data"))
+			Expect(fakeParser.ParseListCallCount()).To(Equal(1))
+			auth, prefix := fakeParser.ParseListArgsForCall(0)
+			Expect(auth).To(Equal("some data"))
+			Expect(prefix).To(Equal("Digest "))
 		})
 
 		Context("on failure", func() {
 			It("returns an error", func() {
-				fakeParser.ParseReturns(map[string]string{}, fmt.Errorf("an-error"))
+				fakeParser.ParseListReturns(map[string]string{}, fmt.Errorf("an-error"))
 
 				err := unmarshaler.Unmarshal([]byte("some data"), &struct{}{})
 
