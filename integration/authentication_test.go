@@ -14,7 +14,6 @@ import (
 )
 
 var _ = Describe("Authentication", func() {
-
 	Describe("GET /protected", func() {
 		Context("with no credentials", func() {
 			unmarshaler := paramlist.UnMarshaler{

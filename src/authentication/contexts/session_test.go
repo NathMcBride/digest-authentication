@@ -10,7 +10,6 @@ import (
 )
 
 var _ = Describe("Session", func() {
-
 	It("adds a session to the context", func() {
 		ctx := context.Background()
 		session := authenticator.Session{User: authenticator.User{UserID: "a-user-id"}, IsAuthenticated: true}

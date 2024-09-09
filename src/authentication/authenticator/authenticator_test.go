@@ -4,142 +4,16 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 
 	"github.com/NathMcBride/digest-authentication/src/authentication/authenticator"
+	. "github.com/NathMcBride/digest-authentication/src/authentication/authenticator/fakes"
 	"github.com/NathMcBride/digest-authentication/src/authentication/model"
 	"github.com/NathMcBride/digest-authentication/src/providers/credential"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-type FakeCredentialProvider struct {
-	callCount   int
-	argsForCall []struct {
-		userID  string
-		useHash bool
-	}
-	getCredentialsReturns struct {
-		credentials *credential.Credentials
-		found       bool
-		err         error
-	}
-}
-
-func (fcp *FakeCredentialProvider) GetCredentialsReturns(credentials *credential.Credentials, found bool, err error) {
-	fcp.getCredentialsReturns.credentials = credentials
-	fcp.getCredentialsReturns.found = found
-	fcp.getCredentialsReturns.err = err
-}
-
-func (fcp *FakeCredentialProvider) GetCredentialsArgsForCall(i int) (string, bool) {
-	args := fcp.argsForCall[i]
-	return args.userID, args.useHash
-}
-
-func (fcp *FakeCredentialProvider) GetCredentials(userID string, useHash bool) (*credential.Credentials, bool, error) {
-	fcp.callCount++
-
-	fcp.argsForCall = append(fcp.argsForCall,
-		struct {
-			userID  string
-			useHash bool
-		}{
-			userID:  userID,
-			useHash: useHash})
-
-	r := fcp.getCredentialsReturns
-	return r.credentials, r.found, r.err
-}
-
-type FakeDigest struct {
-	callCount   int
-	argsForCall []struct {
-		credentials credential.Credentials
-		authHeader  model.AuthHeader
-		Method      string
-	}
-	calculateReturns struct {
-		digest string
-		err    error
-	}
-}
-
-func (fd *FakeDigest) CalculateReturns(digest string, err error) {
-	fd.calculateReturns.digest = digest
-	fd.calculateReturns.err = err
-}
-
-func (fd *FakeDigest) CalculateArgsForCall(i int) (credential.Credentials, model.AuthHeader, string) {
-	args := fd.argsForCall[i]
-	return args.credentials, args.authHeader, args.Method
-}
-
-func (fd *FakeDigest) Calculate(credentials credential.Credentials, authHeader model.AuthHeader, Method string) (string, error) {
-	fd.callCount++
-
-	fd.argsForCall = append(fd.argsForCall,
-		struct {
-			credentials credential.Credentials
-			authHeader  model.AuthHeader
-			Method      string
-		}{
-			credentials: credentials,
-			authHeader:  authHeader,
-			Method:      Method})
-
-	r := fd.calculateReturns
-	return r.digest, r.err
-}
-
-type FakeUnmarshaler struct {
-	unmarshaledValue   any
-	unmarshalCallCount int
-	unmarshalReturns   struct {
-		err error
-	}
-	unmarshalArgsForCall []struct {
-		data []byte
-		v    any
-	}
-}
-
-func (um *FakeUnmarshaler) UnmarshalArgsForCall(i int) ([]byte, any) {
-	args := um.unmarshalArgsForCall[i]
-	return args.data, args.v
-}
-
-func (um *FakeUnmarshaler) UnmarshalCallCount() int {
-	return um.unmarshalCallCount
-}
-
-func (um *FakeUnmarshaler) UnmarshalReturns(err error) {
-	um.unmarshalReturns = struct{ err error }{err}
-}
-
-func (um *FakeUnmarshaler) UnmarshalUnmarshaledValue(v any) {
-	um.unmarshaledValue = v
-}
-
-func (um *FakeUnmarshaler) Unmarshal(data []byte, v any) error {
-	um.unmarshalCallCount++
-	um.unmarshalArgsForCall = append(um.unmarshalArgsForCall, struct {
-		data []byte
-		v    any
-	}{data, v})
-
-	val := reflect.ValueOf(v)
-	if val.Kind() == reflect.Pointer {
-		if um.unmarshaledValue != nil {
-			val.Elem().Set(reflect.ValueOf(um.unmarshaledValue))
-		}
-	}
-
-	return um.unmarshalReturns.err
-}
-
 var _ = Describe("Authenticator", func() {
-
 	Describe("Authenticate", func() {
 		var (
 			fakeCredentialsProvider *FakeCredentialProvider

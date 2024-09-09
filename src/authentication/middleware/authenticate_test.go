@@ -9,57 +9,12 @@ import (
 	"github.com/NathMcBride/digest-authentication/src/authentication/authenticator"
 	"github.com/NathMcBride/digest-authentication/src/authentication/contexts"
 	"github.com/NathMcBride/digest-authentication/src/authentication/middleware"
+	. "github.com/NathMcBride/digest-authentication/src/authentication/middleware/fakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-type ServeHTTPArgs struct {
-	writer  http.ResponseWriter
-	request *http.Request
-}
-
-type FakeHandler struct {
-	callCount   int
-	argsForCall []ServeHTTPArgs
-}
-
-func (fh *FakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fh.callCount++
-	fh.argsForCall = append(fh.argsForCall, ServeHTTPArgs{writer: w, request: r})
-}
-
-type FakeUnauthorizedHandler struct {
-	callCount   int
-	argsForCall []ServeHTTPArgs
-}
-
-func (fu *FakeUnauthorizedHandler) HandleUnauthorized(w http.ResponseWriter, r *http.Request) {
-	fu.callCount++
-	fu.argsForCall = append(fu.argsForCall, ServeHTTPArgs{writer: w, request: r})
-}
-
-type FakeAuthenticator struct {
-	callCount           int
-	argsForCall         []*http.Request
-	authenticateReturns struct {
-		session authenticator.Session
-		err     error
-	}
-}
-
-func (fa *FakeAuthenticator) AuthenticateReturns(session authenticator.Session, err error) {
-	fa.authenticateReturns.session = session
-	fa.authenticateReturns.err = err
-}
-
-func (fa *FakeAuthenticator) Authenticate(r *http.Request) (authenticator.Session, error) {
-	fa.callCount++
-	fa.argsForCall = append(fa.argsForCall, r)
-	return fa.authenticateReturns.session, fa.authenticateReturns.err
-}
-
 var _ = Describe("Authenticate middleware", func() {
-
 	Describe("RequireAuth", func() {
 		var (
 			recorder                *httptest.ResponseRecorder
@@ -90,7 +45,7 @@ var _ = Describe("Authenticate middleware", func() {
 		When("authentication succeeds", func() {
 			It("calls the next handler", func() {
 				requireAuthHandler.ServeHTTP(recorder, request)
-				Expect(fakeNextHandler.callCount).To(Equal(1))
+				Expect(fakeNextHandler.ServeHTTPCallCount()).To(Equal(1))
 			})
 
 			It("stores the session in the context", func() {
@@ -103,8 +58,8 @@ var _ = Describe("Authenticate middleware", func() {
 
 				requireAuthHandler.ServeHTTP(recorder, request.WithContext(context.Background()))
 
-				Expect(fakeNextHandler.callCount).To(Equal(1))
-				r := fakeNextHandler.argsForCall[0].request
+				Expect(fakeNextHandler.ServeHTTPCallCount()).To(Equal(1))
+				_, r := fakeNextHandler.ServeHTTPArgsForCall(0)
 
 				session, ok := r.Context().Value(contexts.SessionCtxKey).(*authenticator.Session)
 				Expect(ok).To(BeTrue(), "Session not found")
@@ -118,14 +73,14 @@ var _ = Describe("Authenticate middleware", func() {
 				fakeAuthenticator.AuthenticateReturns(authenticator.Session{IsAuthenticated: false}, nil)
 				requireAuthHandler.ServeHTTP(recorder, request)
 
-				Expect(fakeUnauthorizedHandler.callCount).To(Equal(1))
+				Expect(fakeUnauthorizedHandler.HandleUnauthorizedCallCount()).To(Equal(1))
 			})
 
 			It("the next handler is not called", func() {
 				fakeAuthenticator.AuthenticateReturns(authenticator.Session{IsAuthenticated: false}, nil)
 				requireAuthHandler.ServeHTTP(recorder, request)
 
-				Expect(fakeNextHandler.callCount).To(Equal(0))
+				Expect(fakeNextHandler.ServeHTTPCallCount()).To(Equal(0))
 			})
 		})
 
@@ -141,7 +96,7 @@ var _ = Describe("Authenticate middleware", func() {
 				fakeAuthenticator.AuthenticateReturns(authenticator.Session{}, fmt.Errorf("an-error"))
 				requireAuthHandler.ServeHTTP(recorder, request)
 
-				Expect(fakeNextHandler.callCount).To(Equal(0))
+				Expect(fakeNextHandler.ServeHTTPCallCount()).To(Equal(0))
 			})
 		})
 	})

@@ -6,93 +6,11 @@ import (
 	"net/http/httptest"
 
 	"github.com/NathMcBride/digest-authentication/src/authentication/handlers"
+	. "github.com/NathMcBride/digest-authentication/src/authentication/handlers/fakes"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
-
-type FakeRandomKeyCreator struct {
-	callCount     int
-	createReturns struct {
-		key string
-	}
-}
-
-func (f *FakeRandomKeyCreator) CreateReturns(key string) {
-	f.createReturns = struct{ key string }{key: key}
-}
-
-func (f *FakeRandomKeyCreator) Create() string {
-	f.callCount++
-	return f.createReturns.key
-}
-
-type FakeChallengeCreator struct {
-	callCount         int
-	createArgsForCall []struct {
-		realm              string
-		opaque             string
-		nonce              string
-		shouldHashUserName bool
-	}
-	createReturns struct {
-		header string
-		err    error
-	}
-}
-
-func (f *FakeChallengeCreator) CreateCallCount() int {
-	return f.callCount
-}
-
-func (f *FakeChallengeCreator) CreateArgsForCall(i int) (realm string, opaque string, nonce string, shouldHashUserName bool) {
-	args := f.createArgsForCall[i]
-	return args.realm, args.opaque, args.nonce, args.shouldHashUserName
-}
-
-func (f *FakeChallengeCreator) CreateReturns(header string, err error) {
-	f.createReturns = struct {
-		header string
-		err    error
-	}{header, err}
-}
-
-func (f *FakeChallengeCreator) Create(realm string, opaque string, nonce string, shouldHashUserName bool) (string, error) {
-	f.callCount++
-	f.createArgsForCall = append(f.createArgsForCall, struct {
-		realm              string
-		opaque             string
-		nonce              string
-		shouldHashUserName bool
-	}{
-		realm,
-		opaque,
-		nonce,
-		shouldHashUserName})
-
-	return f.createReturns.header, f.createReturns.err
-}
-
-type FakeClientStore struct {
-	addCallCount   int
-	addArgsForCall []struct {
-		entry string
-	}
-}
-
-func (f *FakeClientStore) Add(entry string) {
-	f.addCallCount++
-	f.addArgsForCall = append(f.addArgsForCall, struct {
-		entry string
-	}{
-		entry: entry})
-}
-
-func (f *FakeClientStore) Has(entry string) bool {
-	return true
-}
-
-func (f *FakeClientStore) Delete(entry string) {}
 
 var _ = Describe("Unauthorized handler", func() {
 	var (
@@ -128,8 +46,8 @@ var _ = Describe("Unauthorized handler", func() {
 	It("adds the nonce to client store", func() {
 		unauthorizedHandler.HandleUnauthorized(recorder, request)
 
-		Expect(fakeRandomKeyCreator.callCount).To(Equal(1))
-		Expect(fakeClientStore.addCallCount).To(Equal(1))
+		Expect(fakeRandomKeyCreator.CreateCallCount()).To(Equal(1))
+		Expect(fakeClientStore.AddCallCount()).To(Equal(1))
 	})
 
 	Context("creating a Digest challenge", func() {
